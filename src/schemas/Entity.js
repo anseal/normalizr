@@ -37,10 +37,7 @@ export default class EntitySchema {
 	}
 
 	define(definition) {
-		this.schema = Object.keys(definition).reduce((entitySchema, key) => {
-			const schema = definition[key]
-			return { ...entitySchema, [key]: schema }
-		}, this.schema || {})
+		this.schema = Object.assign(this.schema || {}, definition);
 	}
 
 	getId(input, parent, key) {
