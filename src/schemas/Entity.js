@@ -91,8 +91,19 @@ export class ObjectSchema {
 		this.schema = Object.assign(this.schema || {}, definition);
 	}
 
-	normalize(...args) {
-		return normalizeObject(this.schema, ...args)
+	normalize(input, parent, key, addEntity, visitedEntities) {
+		const object = { ...input }
+		Object.keys(this.schema).forEach((key) => {
+			const localSchema = this.schema[key]
+			const resolvedLocalSchema = typeof localSchema === 'function' ? localSchema(input) : localSchema
+			const value = visit(input[key], input, key, resolvedLocalSchema, addEntity, visitedEntities)
+			if (value === undefined || value === null) {
+				delete object[key]
+			} else {
+				object[key] = value
+			}
+		})
+		return object
 	}
 }
 
@@ -224,19 +235,4 @@ export const validateSchema = (definition) => {
 	}
 
 	return definition[0]
-}
-
-export const normalizeObject = (schema, input, parent, key, addEntity, visitedEntities) => {
-	const object = { ...input }
-	Object.keys(schema).forEach((key) => {
-		const localSchema = schema[key]
-		const resolvedLocalSchema = typeof localSchema === 'function' ? localSchema(input) : localSchema
-		const value = visit(input[key], input, key, resolvedLocalSchema, addEntity, visitedEntities)
-		if (value === undefined || value === null) {
-			delete object[key]
-		} else {
-			object[key] = value
-		}
-	})
-	return object
 }
