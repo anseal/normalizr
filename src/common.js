@@ -1,8 +1,10 @@
 export const visit = (value, parent, key, schema, addEntity, visitedEntities) => {
+	// TODO: why `!value` and not `value === null` ? because `0` will be returned and `1` will be `normalize`d
 	if (typeof value !== 'object' || !value) {
 		return value
 	}
 
+	// TODO: I suppose this is for [schema] and {schema} shortcuts... but it has a flavor of monkey-patching
 	if (typeof schema === 'object' && (!schema.normalize || typeof schema.normalize !== 'function')) {
 		const method = Array.isArray(schema) ? normalizeArray : normalizeObject
 		return method(schema, value, parent, key, addEntity, visitedEntities)

@@ -14,6 +14,7 @@ export const schema = {
 }
 
 export const normalize = (input, schema) => {
+	// TODO: not sure why we should throw here but not deeper in the tree (there we just return value)
 	if (!input || typeof input !== 'object') {
 		throw new Error(
 			`Unexpected input given to normalize. Expected type to be "object", found "${
