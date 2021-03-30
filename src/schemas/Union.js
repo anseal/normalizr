@@ -8,8 +8,8 @@ export default class UnionSchema extends PolymorphicSchema {
 		super(definition, schemaAttribute)
 	}
 
-	normalize(input, parent, key, visit, addEntity, visitedEntities) {
-		return this.normalizeValue(input, parent, key, visit, addEntity, visitedEntities)
+	normalize(input, parent, key, addEntity, visitedEntities) {
+		return this.normalizeValue(input, parent, key, addEntity, visitedEntities)
 	}
 
 	denormalize(input, unvisit) {

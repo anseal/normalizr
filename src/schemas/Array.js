@@ -7,11 +7,11 @@ export const denormalize = (schema, input, unvisit) => {
 }
 
 export default class ArraySchema extends PolymorphicSchema {
-	normalize(input, parent, key, visit, addEntity, visitedEntities) {
+	normalize(input, parent, key, addEntity, visitedEntities) {
 		const values = getValues(input)
 
 		return values
-			.map((value, index) => this.normalizeValue(value, parent, key, visit, addEntity, visitedEntities))
+			.map((value, index) => this.normalizeValue(value, parent, key, addEntity, visitedEntities))
 			.filter((value) => value !== undefined && value !== null)
 	}
 

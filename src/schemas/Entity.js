@@ -1,4 +1,5 @@
 import * as ImmutableUtils from './ImmutableUtils'
+import { visit } from '../common.js'
 
 const getDefaultGetId = (idAttribute) => (input) =>
 	ImmutableUtils.isImmutable(input) ? input.get(idAttribute) : input[idAttribute]
@@ -54,7 +55,7 @@ export default class EntitySchema {
 		return this._fallbackStrategy(id, schema)
 	}
 
-	normalize(input, parent, key, visit, addEntity, visitedEntities) {
+	normalize(input, parent, key, addEntity, visitedEntities) {
 		const id = this.getId(input, parent, key)
 		const entityType = this.key
 

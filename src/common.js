@@ -5,10 +5,10 @@ export const visit = (value, parent, key, schema, addEntity, visitedEntities) =>
 
 	if (typeof schema === 'object' && (!schema.normalize || typeof schema.normalize !== 'function')) {
 		const method = Array.isArray(schema) ? normalizeArray : normalizeObject
-		return method(schema, value, parent, key, visit, addEntity, visitedEntities)
+		return method(schema, value, parent, key, addEntity, visitedEntities)
 	}
 
-	return schema.normalize(value, parent, key, visit, addEntity, visitedEntities)
+	return schema.normalize(value, parent, key, addEntity, visitedEntities)
 }
 
 export const getValues = (input) => (Array.isArray(input) ? input : Object.keys(input).map((key) => input[key]))
@@ -22,7 +22,7 @@ export const validateSchema = (definition) => {
 	return definition[0]
 }
 
-export const normalizeArray = (schema, input, parent, key, visit, addEntity, visitedEntities) => {
+export const normalizeArray = (schema, input, parent, key, addEntity, visitedEntities) => {
 	schema = validateSchema(schema)
 
 	const values = getValues(input)
@@ -32,7 +32,7 @@ export const normalizeArray = (schema, input, parent, key, visit, addEntity, vis
 	return values.map((value, index) => visit(value, parent, key, schema, addEntity, visitedEntities))
 }
 
-export const normalizeObject = (schema, input, parent, key, visit, addEntity, visitedEntities) => {
+export const normalizeObject = (schema, input, parent, key, addEntity, visitedEntities) => {
 	const object = { ...input }
 	Object.keys(schema).forEach((key) => {
 		const localSchema = schema[key]

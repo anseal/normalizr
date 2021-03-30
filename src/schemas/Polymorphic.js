@@ -1,4 +1,5 @@
 import { isImmutable } from './ImmutableUtils'
+import { visit } from '../common.js'
 
 export default class PolymorphicSchema {
 	constructor(definition, schemaAttribute) {
@@ -29,7 +30,7 @@ export default class PolymorphicSchema {
 		return this.schema[attr]
 	}
 
-	normalizeValue(value, parent, key, visit, addEntity, visitedEntities) {
+	normalizeValue(value, parent, key, addEntity, visitedEntities) {
 		const schema = this.inferSchema(value, parent, key)
 		if (!schema) {
 			return value
