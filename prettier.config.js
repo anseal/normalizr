@@ -1,6 +1,9 @@
 module.exports = {
-  'arrowParens': 'always',
-  'printWidth': 120,
-  'singleQuote': true,
-  'quoteProps': 'preserve',
-};
+	'semi': false,
+	'useTabs': true,
+	'tabWidth': 2,
+	'arrowParens': 'always',
+	'printWidth': 120,
+	'singleQuote': true,
+	'quoteProps': 'preserve',
+}

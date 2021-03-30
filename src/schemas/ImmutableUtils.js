@@ -11,12 +11,12 @@
  * @return {bool}
  */
 export function isImmutable(object) {
-  return !!(
-    object &&
-    typeof object.hasOwnProperty === 'function' &&
-    (object.hasOwnProperty('__ownerID') || // Immutable.Map
-      (object._map && object._map.hasOwnProperty('__ownerID')))
-  ); // Immutable.Record
+	return !!(
+		object &&
+		typeof object.hasOwnProperty === 'function' &&
+		(object.hasOwnProperty('__ownerID') || // Immutable.Map
+			(object._map && object._map.hasOwnProperty('__ownerID')))
+	) // Immutable.Record
 }
 
 /**
@@ -29,15 +29,15 @@ export function isImmutable(object) {
  * @return {Immutable.Map|Immutable.Record}
  */
 export function denormalizeImmutable(schema, input, unvisit) {
-  return Object.keys(schema).reduce((object, key) => {
-    // Immutable maps cast keys to strings on write so we need to ensure
-    // we're accessing them using string keys.
-    const stringKey = `${key}`;
+	return Object.keys(schema).reduce((object, key) => {
+		// Immutable maps cast keys to strings on write so we need to ensure
+		// we're accessing them using string keys.
+		const stringKey = `${key}`
 
-    if (object.has(stringKey)) {
-      return object.set(stringKey, unvisit(object.get(stringKey), schema[stringKey]));
-    } else {
-      return object;
-    }
-  }, input);
+		if (object.has(stringKey)) {
+			return object.set(stringKey, unvisit(object.get(stringKey), schema[stringKey]))
+		} else {
+			return object
+		}
+	}, input)
 }
