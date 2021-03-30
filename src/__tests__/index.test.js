@@ -1,5 +1,5 @@
 // eslint-env jest
-import { visit } from '../common.js'
+import { visit } from '../schemas/Entity.js'
 import { normalize, schema } from '../'
 
 describe('normalize', () => {

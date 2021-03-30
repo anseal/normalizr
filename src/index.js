@@ -1,9 +1,4 @@
-import ArraySchema from './schemas/Array'
-import EntitySchema from './schemas/Entity'
-import ObjectSchema from './schemas/Object'
-import UnionSchema from './schemas/Union'
-import ValuesSchema from './schemas/Values'
-import { visit } from './common.js'
+import { ArraySchema, EntitySchema, ObjectSchema, UnionSchema, ValuesSchema, visit } from './schemas/Entity'
 
 export const schema = {
 	Array: ArraySchema,
