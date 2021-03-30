@@ -16,7 +16,6 @@ export default class EntitySchema {
 				return { ...entityA, ...entityB }
 			},
 			processStrategy = (input) => ({ ...input }),
-			fallbackStrategy = (key, schema) => undefined,
 		} = options
 
 		this._key = key
@@ -24,7 +23,6 @@ export default class EntitySchema {
 		this._idAttribute = idAttribute
 		this._mergeStrategy = mergeStrategy
 		this._processStrategy = processStrategy
-		this._fallbackStrategy = fallbackStrategy
 		this.define(definition)
 	}
 
@@ -46,10 +44,6 @@ export default class EntitySchema {
 
 	merge(entityA, entityB) {
 		return this._mergeStrategy(entityA, entityB)
-	}
-
-	fallback(id, schema) {
-		return this._fallbackStrategy(id, schema)
 	}
 
 	normalize(input, parent, key, addEntity, visitedEntities) {
