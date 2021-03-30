@@ -5,21 +5,6 @@ import UnionSchema from './schemas/Union'
 import ValuesSchema from './schemas/Values'
 import { visit } from './common.js'
 
-const addEntities = (entities) => (schema, processedEntity, value, parent, key) => {
-	const schemaKey = schema.key
-	const id = schema.getId(value, parent, key)
-	if (!(schemaKey in entities)) {
-		entities[schemaKey] = {}
-	}
-
-	const existingEntity = entities[schemaKey][id]
-	if (existingEntity) {
-		entities[schemaKey][id] = schema.merge(existingEntity, processedEntity)
-	} else {
-		entities[schemaKey][id] = processedEntity
-	}
-}
-
 export const schema = {
 	Array: ArraySchema,
 	Entity: EntitySchema,
@@ -38,8 +23,21 @@ export const normalize = (input, schema) => {
 	}
 
 	const entities = {}
-	const addEntity = addEntities(entities)
 	const visitedEntities = {}
+	const addEntity = (schema, processedEntity, value, parent, key) => {
+		const schemaKey = schema.key
+		const id = schema.getId(value, parent, key)
+		if (!(schemaKey in entities)) {
+			entities[schemaKey] = {}
+		}
+	
+		const existingEntity = entities[schemaKey][id]
+		if (existingEntity) {
+			entities[schemaKey][id] = schema.merge(existingEntity, processedEntity)
+		} else {
+			entities[schemaKey][id] = processedEntity
+		}
+	}
 
 	const result = visit(input, input, null, schema, addEntity, visitedEntities)
 	return { entities, result }
