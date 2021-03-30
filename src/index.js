@@ -2,21 +2,9 @@ import * as ImmutableUtils from './schemas/ImmutableUtils'
 import EntitySchema from './schemas/Entity'
 import UnionSchema from './schemas/Union'
 import ValuesSchema from './schemas/Values'
+import { visit } from './common.js';
 import ArraySchema, * as ArrayUtils from './schemas/Array'
 import ObjectSchema, * as ObjectUtils from './schemas/Object'
-
-const visit = (value, parent, key, schema, addEntity, visitedEntities) => {
-	if (typeof value !== 'object' || !value) {
-		return value
-	}
-
-	if (typeof schema === 'object' && (!schema.normalize || typeof schema.normalize !== 'function')) {
-		const method = Array.isArray(schema) ? ArrayUtils.normalize : ObjectUtils.normalize
-		return method(schema, value, parent, key, visit, addEntity, visitedEntities)
-	}
-
-	return schema.normalize(value, parent, key, visit, addEntity, visitedEntities)
-}
 
 const addEntities = (entities) => (schema, processedEntity, value, parent, key) => {
 	const schemaKey = schema.key
