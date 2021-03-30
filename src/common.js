@@ -29,7 +29,7 @@ export const normalizeArray = (schema, input, parent, key, addEntity, visitedEnt
 
 	// Special case: Arrays pass *their* parent on to their children, since there
 	// is not any special information that can be gathered from themselves directly
-	return values.map((value, index) => visit(value, parent, key, schema, addEntity, visitedEntities))
+	return values.map((value) => visit(value, parent, key, schema, addEntity, visitedEntities))
 }
 
 export const normalizeObject = (schema, input, parent, key, addEntity, visitedEntities) => {
