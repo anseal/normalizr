@@ -117,7 +117,7 @@ module.exports = {
     'valid-typeof': 'error',
     yoda: ['error', 'never'],
 
-    'prettier/prettier': 'error',
+    'prettier/prettier': 'off',
 
     'jest/consistent-test-it': ['error', { fn: 'test' }],
     'jest/no-disabled-tests': 'error',
