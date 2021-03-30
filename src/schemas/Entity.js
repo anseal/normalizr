@@ -162,19 +162,25 @@ export class ValuesSchema extends PolymorphicSchema {
 }
 
 export class ArraySchema extends PolymorphicSchema {
+	constructor(definition, schemaAttribute, filterFalsies = true) {
+		super(definition, schemaAttribute)
+		this.filterFalsies = filterFalsies
+	}
 	normalize(input, parent, key, addEntity, visitedEntities) {
-		// TODO: what is it for? in denormalization - probably. but here... why?
-		// const getValues = (input) => (Array.isArray(input) ? input : Object.keys(input).map((key) => input[key]))
-		// maybe replace with
+		// TODO: what is it for? in denormalization - probably. but here... why? maybe replace with
 		// const values = input
 		const values = getValues(input)
 
 		// TODO: preallocate, and then cut by length?
 		const normArray = []
 		for(const value of values) {
+			// Special case: Arrays pass *their* parent on to their children, since there
+			// is not any special information that can be gathered from themselves directly
 			const normValue = this.normalizeValue(value, parent, key, addEntity, visitedEntities)
 			// TODO: what is it for, and why here and not before `normalizeValue`?
-			if( normValue !== undefined && normValue !== null ) {
+			// TODO: filtration of falsies present in tests, but not in docs, and I have no idea why the difference
+			// between [mySchema] and schema.Array(mySchema)
+			if( this.filterFalsies === false || (normValue !== undefined && normValue !== null) ) {
 				normArray.push(normValue)
 			}
 		}
@@ -203,8 +209,7 @@ export const visit = (value, parent, key, schema, addEntity, visitedEntities) =>
 
 	// TODO: I suppose this is for [schema] and {schema} shortcuts... but it has a flavor of monkey-patching
 	if (typeof schema === 'object' && (!schema.normalize || typeof schema.normalize !== 'function')) {
-		const method = Array.isArray(schema) ? normalizeArray : normalizeObject
-		return method(schema, value, parent, key, addEntity, visitedEntities)
+		schema = Array.isArray(schema) ? new ArraySchema(validateSchema(schema), undefined, false) : new ObjectSchema(schema)
 	}
 
 	return schema.normalize(value, parent, key, addEntity, visitedEntities)
@@ -219,16 +224,6 @@ export const validateSchema = (definition) => {
 	}
 
 	return definition[0]
-}
-
-export const normalizeArray = (schema, input, parent, key, addEntity, visitedEntities) => {
-	schema = validateSchema(schema)
-
-	const values = getValues(input)
-
-	// Special case: Arrays pass *their* parent on to their children, since there
-	// is not any special information that can be gathered from themselves directly
-	return values.map((value) => visit(value, parent, key, schema, addEntity, visitedEntities))
 }
 
 export const normalizeObject = (schema, input, parent, key, addEntity, visitedEntities) => {
