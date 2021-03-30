@@ -146,16 +146,6 @@ class PolymorphicSchema {
 			? normalizedValue
 			: { id: normalizedValue, schema: this.getSchemaAttribute(value, parent, key) }
 	}
-
-	denormalizeValue(value, unvisit) {
-		const schemaKey = isImmutable(value) ? value.get('schema') : value.schema
-		if (!this.isSingleSchema && !schemaKey) {
-			return value
-		}
-		const id = this.isSingleSchema ? undefined : isImmutable(value) ? value.get('id') : value.id
-		const schema = this.isSingleSchema ? this.schema : this.schema[schemaKey]
-		return unvisit(id || value, schema)
-	}
 }
 
 export class ValuesSchema extends PolymorphicSchema {
