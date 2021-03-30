@@ -1,10 +1,5 @@
+import { getValues } from '../common.js';
 import PolymorphicSchema from './Polymorphic'
-import { getValues, validateSchema } from '../common.js';
-
-export const denormalize = (schema, input, unvisit) => {
-	schema = validateSchema(schema)
-	return input && input.map ? input.map((entityOrId) => unvisit(entityOrId, schema)) : input
-}
 
 export default class ArraySchema extends PolymorphicSchema {
 	normalize(input, parent, key, addEntity, visitedEntities) {
@@ -24,9 +19,5 @@ export default class ArraySchema extends PolymorphicSchema {
 			}
 		}
 		return normArray
-	}
-
-	denormalize(input, unvisit) {
-		return input && input.map ? input.map((value) => this.denormalizeValue(value, unvisit)) : input
 	}
 }
