@@ -10,9 +10,14 @@ export default class ArraySchema extends PolymorphicSchema {
 	normalize(input, parent, key, addEntity, visitedEntities) {
 		const values = getValues(input)
 
-		return values
-			.map((value, index) => this.normalizeValue(value, parent, key, addEntity, visitedEntities))
-			.filter((value) => value !== undefined && value !== null)
+		const normArray = []
+		for(const value of values) {
+			const normValue = this.normalizeValue(value, parent, key, addEntity, visitedEntities)
+			if( normValue !== undefined && normValue !== null ) {
+				normArray.push(normValue)
+			}
+		}
+		return normArray
 	}
 
 	denormalize(input, unvisit) {
