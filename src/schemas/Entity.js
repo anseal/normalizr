@@ -1,8 +1,5 @@
 import { isImmutable } from './ImmutableUtils.js'
 
-const getDefaultGetId = (idAttribute) => (input) =>
-	isImmutable(input) ? input.get(idAttribute) : input[idAttribute]
-
 export const compileSchema = (schema) => {
 	// TODO: looks like monkey-patching
 	if (typeof schema === 'object' && (!schema.normalize || typeof schema.normalize !== 'function')) {
@@ -32,7 +29,7 @@ export class EntitySchema {
 		} = options
 
 		this._key = key
-		this._getId = typeof idAttribute === 'function' ? idAttribute : getDefaultGetId(idAttribute)
+		this._getId = typeof idAttribute === 'function' ? idAttribute : (input) => isImmutable(input) ? input.get(idAttribute) : input[idAttribute]
 		this._idAttribute = idAttribute
 		this._mergeStrategy = mergeStrategy
 		this._processStrategy = processStrategy
@@ -54,17 +51,13 @@ export class EntitySchema {
 		this.schema = Object.assign(this.schema || {}, definition);
 	}
 
-	getId(input, parent, key) {
-		return this._getId(input, parent, key)
-	}
-
 	normalize(input, parent, key, entities, visited) {
 		// TODO: why `!input` and not `input === null` ? because `0` will be returned and `1` will be `normalize`d
 		if (typeof input !== 'object' || !input) {
 			return input
 		}
-		const id = this.getId(input, parent, key)
-		const entityType = this.key
+		const id = this._getId(input, parent, key) // TODO: what if id === `undefined`?
+		const entityType = this._key
 
 		if(visited(input, entityType, id)) { return id }
 
