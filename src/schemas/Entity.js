@@ -178,15 +178,14 @@ export class ValuesSchema extends PolymorphicSchema {
 		if (typeof input !== 'object' || !input) {
 			return input
 		}
-		return Object.keys(input).reduce((output, key) => { // TODO: `for` insted of `reduce` & spread
+		const output = {}
+		for(const key in input) { // TODO: hasOwnProperty?
 			const value = input[key]
-			return value !== undefined && value !== null
-				? {
-						...output,
-						[key]: this._normalizeValue(value, input, key, entities, visited),
-				  }
-				: output
-		}, {})
+			if( value !== undefined && value !== null ) {
+				output[key] = this._normalizeValue(value, input, key, entities, visited)
+			}
+		}
+		return output
 	}
 }
 
