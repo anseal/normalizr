@@ -124,56 +124,6 @@ Array [
   Array [
     Object {
       "id": "123",
-      "type": "cats",
-    },
-    Array [
-      Object {
-        "id": "123",
-        "type": "cats",
-      },
-      Object {
-        "id": "123",
-        "type": "people",
-      },
-      Object {
-        "id": "789",
-        "name": "fido",
-      },
-      Object {
-        "id": "456",
-        "type": "cats",
-      },
-    ],
-    null,
-  ],
-  Array [
-    Object {
-      "id": "123",
-      "type": "people",
-    },
-    Array [
-      Object {
-        "id": "123",
-        "type": "cats",
-      },
-      Object {
-        "id": "123",
-        "type": "people",
-      },
-      Object {
-        "id": "789",
-        "name": "fido",
-      },
-      Object {
-        "id": "456",
-        "type": "cats",
-      },
-    ],
-    null,
-  ],
-  Array [
-    Object {
-      "id": "123",
       "type": "people",
     },
     Array [
@@ -200,31 +150,6 @@ Array [
     Object {
       "id": "789",
       "name": "fido",
-    },
-    Array [
-      Object {
-        "id": "123",
-        "type": "cats",
-      },
-      Object {
-        "id": "123",
-        "type": "people",
-      },
-      Object {
-        "id": "789",
-        "name": "fido",
-      },
-      Object {
-        "id": "456",
-        "type": "cats",
-      },
-    ],
-    null,
-  ],
-  Array [
-    Object {
-      "id": "456",
-      "type": "cats",
     },
     Array [
       Object {

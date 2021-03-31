@@ -133,28 +133,26 @@ class PolymorphicSchema {
 		this.schema = definition
 	}
 
-	getSchemaAttribute(input, parent, key) {
-		return !this.isSingleSchema && this._schemaAttribute(input, parent, key)
-	}
-
-	inferSchema(input, parent, key) {
+	normalizeValue(value, parent, key, entities, visitedEntities) {
+		let schema
+		let attr
 		if (this.isSingleSchema) {
-			return this.schema
+			schema = this.schema
+		} else {
+			attr = !this.isSingleSchema && this._schemaAttribute(value, parent, key)
+			schema = this.schema[attr]
 		}
 
-		const attr = this.getSchemaAttribute(input, parent, key)
-		return this.schema[attr]
-	}
-
-	normalizeValue(value, parent, key, entities, visitedEntities) {
-		const schema = this.inferSchema(value, parent, key)
 		if (!schema) {
 			return value
 		}
 		const normalizedValue = visit(value, parent, key, schema, entities, visitedEntities)
 		return this.isSingleSchema || normalizedValue === undefined || normalizedValue === null
 			? normalizedValue
-			: { id: normalizedValue, schema: this.getSchemaAttribute(value, parent, key) }
+			: {
+				id: normalizedValue,
+				schema: attr
+			}
 	}
 }
 
