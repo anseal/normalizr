@@ -215,18 +215,5 @@ Array [
     },
     null,
   ],
-  Array [
-    Object {
-      "user": Object {
-        "id": "456",
-      },
-    },
-    Object {
-      "user": Object {
-        "id": "456",
-      },
-    },
-    null,
-  ],
 ]
 `;

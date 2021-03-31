@@ -107,17 +107,31 @@ describe('normalize', () => {
 				return entity.uuid
 			}
 
-			normalize(input, parent, key, addEntity, visitedEntities) {
+			normalize(input, parent, key, entities, visitedEntities) {
 				const entity = { ...input }
 				Object.keys(this.schema).forEach((key) => {
 					const schema = this.schema[key]
 					// TODO: inherit visit?
-					entity[key] = visit(input[key], input, key, schema, addEntity, visitedEntities)
+					entity[key] = visit(input[key], input, key, schema, entities, visitedEntities)
 				})
-				addEntity(this, entity, parent, key)
+				// TODO: inherit this part from `EntitySchema.normalize`?
+				const entityType = this.key
+				const id = this.getId(entity)
+				if (entityType in entities === false) {
+					entities[entityType] = {}
+				}
+				const entitiesOfKind = entities[entityType]
+			
+				const existingEntity = entitiesOfKind[id]
+				if (existingEntity) {
+					entitiesOfKind[id] = this.merge(existingEntity, entity)
+				} else {
+					entitiesOfKind[id] = entity
+				}
+
 				return {
-					uuid: this.getId(entity),
-					schema: this.key,
+					uuid: id,
+					schema: entityType,
 				}
 			}
 		}

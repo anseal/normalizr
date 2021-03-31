@@ -20,22 +20,7 @@ export const normalize = (input, schema) => {
 
 	const entities = {}
 	const visitedEntities = {}
-	const addEntity = (schema, processedEntity, value, parent, key) => {
-		const schemaKey = schema.key
-		const id = schema.getId(value, parent, key)
-		if (schemaKey in entities === false) {
-			entities[schemaKey] = {}
-		}
-		const entitiesOfKind = entities[schemaKey]
-	
-		const existingEntity = entitiesOfKind[id]
-		if (existingEntity) {
-			entitiesOfKind[id] = schema.merge(existingEntity, processedEntity)
-		} else {
-			entitiesOfKind[id] = processedEntity
-		}
-	}
 
-	const result = visit(input, input, null, schema, addEntity, visitedEntities)
+	const result = visit(input, input, null, schema, entities, visitedEntities)
 	return { entities, result }
 }

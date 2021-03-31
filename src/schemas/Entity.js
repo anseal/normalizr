@@ -45,7 +45,7 @@ export class EntitySchema {
 		return this._mergeStrategy(entityA, entityB)
 	}
 
-	normalize(input, parent, key, addEntity, visitedEntities) {
+	normalize(input, parent, key, entities, visitedEntities) {
 		const id = this.getId(input, parent, key)
 		const entityType = this.key
 
@@ -70,13 +70,23 @@ export class EntitySchema {
 					processedEntity,
 					key,
 					resolvedSchema,
-					addEntity,
+					entities,
 					visitedEntities
 				)
 			}
 		})
 
-		addEntity(this, processedEntity, input, parent, key)
+		if (entityType in entities === false) {
+			entities[entityType] = {}
+		}
+		const entitiesOfKind = entities[entityType]
+	
+		const existingEntity = entitiesOfKind[id]
+		if (existingEntity) {
+			entitiesOfKind[id] = this.merge(existingEntity, processedEntity)
+		} else {
+			entitiesOfKind[id] = processedEntity
+		}
 		return id
 	}
 }
@@ -91,12 +101,12 @@ export class ObjectSchema {
 		this.schema = Object.assign(this.schema || {}, definition);
 	}
 
-	normalize(input, parent, key, addEntity, visitedEntities) {
+	normalize(input, parent, key, entities, visitedEntities) {
 		const object = { ...input }
 		Object.keys(this.schema).forEach((key) => {
 			const localSchema = this.schema[key]
 			const resolvedLocalSchema = typeof localSchema === 'function' ? localSchema(input) : localSchema
-			const value = visit(input[key], input, key, resolvedLocalSchema, addEntity, visitedEntities)
+			const value = visit(input[key], input, key, resolvedLocalSchema, entities, visitedEntities)
 			if (value === undefined || value === null) {
 				delete object[key]
 			} else {
@@ -136,12 +146,12 @@ class PolymorphicSchema {
 		return this.schema[attr]
 	}
 
-	normalizeValue(value, parent, key, addEntity, visitedEntities) {
+	normalizeValue(value, parent, key, entities, visitedEntities) {
 		const schema = this.inferSchema(value, parent, key)
 		if (!schema) {
 			return value
 		}
-		const normalizedValue = visit(value, parent, key, schema, addEntity, visitedEntities)
+		const normalizedValue = visit(value, parent, key, schema, entities, visitedEntities)
 		return this.isSingleSchema || normalizedValue === undefined || normalizedValue === null
 			? normalizedValue
 			: { id: normalizedValue, schema: this.getSchemaAttribute(value, parent, key) }
@@ -149,13 +159,13 @@ class PolymorphicSchema {
 }
 
 export class ValuesSchema extends PolymorphicSchema {
-	normalize(input, parent, key, addEntity, visitedEntities) {
+	normalize(input, parent, key, entities, visitedEntities) {
 		return Object.keys(input).reduce((output, key) => {
 			const value = input[key]
 			return value !== undefined && value !== null
 				? {
 						...output,
-						[key]: this.normalizeValue(value, input, key, addEntity, visitedEntities),
+						[key]: this.normalizeValue(value, input, key, entities, visitedEntities),
 				  }
 				: output
 		}, {})
@@ -167,7 +177,7 @@ export class ArraySchema extends PolymorphicSchema {
 		super(definition, schemaAttribute)
 		this.filterFalsies = filterFalsies
 	}
-	normalize(input, parent, key, addEntity, visitedEntities) {
+	normalize(input, parent, key, entities, visitedEntities) {
 		// TODO: what is it for? in denormalization - probably. but here... why? maybe replace with
 		// const values = input
 		const values = getValues(input)
@@ -177,7 +187,7 @@ export class ArraySchema extends PolymorphicSchema {
 		for(const value of values) {
 			// Special case: Arrays pass *their* parent on to their children, since there
 			// is not any special information that can be gathered from themselves directly
-			const normValue = this.normalizeValue(value, parent, key, addEntity, visitedEntities)
+			const normValue = this.normalizeValue(value, parent, key, entities, visitedEntities)
 			// TODO: what is it for, and why here and not before `normalizeValue`?
 			// TODO: filtration of falsies present in tests, but not in docs, and I have no idea why the difference
 			// between [mySchema] and schema.Array(mySchema)
@@ -197,12 +207,12 @@ export class UnionSchema extends PolymorphicSchema {
 		super(definition, schemaAttribute)
 	}
 
-	normalize(input, parent, key, addEntity, visitedEntities) {
-		return this.normalizeValue(input, parent, key, addEntity, visitedEntities)
+	normalize(input, parent, key, entities, visitedEntities) {
+		return this.normalizeValue(input, parent, key, entities, visitedEntities)
 	}
 }
 
-export const visit = (value, parent, key, schema, addEntity, visitedEntities) => {
+export const visit = (value, parent, key, schema, entities, visitedEntities) => {
 	// TODO: why `!value` and not `value === null` ? because `0` will be returned and `1` will be `normalize`d
 	if (typeof value !== 'object' || !value) {
 		return value
@@ -213,7 +223,7 @@ export const visit = (value, parent, key, schema, addEntity, visitedEntities) =>
 		schema = Array.isArray(schema) ? new ArraySchema(validateSchema(schema), undefined, false) : new ObjectSchema(schema)
 	}
 
-	return schema.normalize(value, parent, key, addEntity, visitedEntities)
+	return schema.normalize(value, parent, key, entities, visitedEntities)
 }
 
 export const getValues = (input) => (Array.isArray(input) ? input : Object.keys(input).map((key) => input[key]))
