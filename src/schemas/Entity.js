@@ -134,6 +134,7 @@ class PolymorphicSchema {
 	}
 
 	normalizeValue(value, parent, key, entities, visitedEntities) {
+		// TODO: get rid of `let`
 		let schema
 		let attr
 		if (this.isSingleSchema) {
