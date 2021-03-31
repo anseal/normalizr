@@ -49,6 +49,7 @@ export class EntitySchema {
 
 	define(definition) {
 		// TODO: check if `definition` is an object?
+		// TODO: check if it's a plain object, so that it's safe to iterate over schema without `hasOwnProperty`
 		for(const key in definition) { definition[key] = compileSchema(definition[key]) }
 		this.schema = Object.assign(this.schema || {}, definition);
 	}
@@ -68,7 +69,7 @@ export class EntitySchema {
 		if(visited(input, entityType, id)) { return id }
 
 		const processedEntity = this._processStrategy(input, parent, key)
-		Object.keys(this.schema).forEach((key) => { // TODO: precompile
+		for(const key in this.schema) {
 			if (processedEntity.hasOwnProperty(key) && typeof processedEntity[key] === 'object') { // TODO: switch places
 				const schema = this.schema[key]
 				const resolvedSchema = typeof schema === 'function' ? schema(input) : schema // TODO: function instead of if?
@@ -80,7 +81,7 @@ export class EntitySchema {
 					visited
 				)
 			}
-		})
+		}
 
 		if (entityType in entities === false) {
 			entities[entityType] = {}
@@ -106,6 +107,7 @@ export class ObjectSchema {
 	// TODO: now there is a difference, should we compile children schemas and should there be more tests?
 	define(definition) {
 		// TODO: check if `definition` is an object?
+		// TODO: check if it's a plain object, so that it's safe to iterate over schema without `hasOwnProperty`
 		this.schema = Object.assign(this.schema || {}, definition);
 	}
 
@@ -116,7 +118,7 @@ export class ObjectSchema {
 		}
 		// TODO: don't copy... why do we even need this? just iterate other `input`s keys and check if there's a schema for this key
 		const object = { ...input }
-		Object.keys(this.schema).forEach((key) => { // TODO: precompile
+		for(const key in this.schema) {
 			const localSchema = this.schema[key] // TODO: DRY with `EntitySchema.normalize`
 			const resolvedLocalSchema = typeof localSchema === 'function' ? localSchema(input) : localSchema
 			const value = resolvedLocalSchema.normalize(input[key], input, key, entities, visited)
@@ -125,7 +127,7 @@ export class ObjectSchema {
 			} else {
 				object[key] = value
 			}
-		})
+		}
 		return object
 	}
 }
