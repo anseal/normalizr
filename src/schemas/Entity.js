@@ -144,9 +144,9 @@ class PolymorphicSchema {
 	constructor(definition, schemaAttribute) {
 		if (schemaAttribute) {
 			this._schemaAttribute = typeof schemaAttribute === 'string' ? (input) => input[schemaAttribute] : schemaAttribute
-			this._normalize = this.normalizeValue2
+			this._normalizeValue = this._normalizeValue2
 		} else {
-			this._normalize = this.normalizeValue1
+			this._normalizeValue = this._normalizeValue1
 		}
 		this.define(definition)
 	}
@@ -155,20 +155,14 @@ class PolymorphicSchema {
 		this.schema = definition
 	}
 
-	normalizeValue(value, parent, key, entities, visitedEntities) {
-		return this._normalize(value, parent, key, entities, visitedEntities)
-	}
-
-	normalizeValue1(value, parent, key, entities, visitedEntities) {
+	_normalizeValue1(value, parent, key, entities, visitedEntities) {
 		if (!this.schema) {
 			return value
 		}
-		const normalizedValue = this.schema.normalize(value, parent, key, entities, visitedEntities)
-		return normalizedValue
+		return this.schema.normalize(value, parent, key, entities, visitedEntities)
 	}
 
-
-	normalizeValue2(value, parent, key, entities, visitedEntities) {
+	_normalizeValue2(value, parent, key, entities, visitedEntities) {
 		// TODO: just a function whould be simpler compared to function & map
 		const attr = this._schemaAttribute(value, parent, key)
 		const schema = this.schema[attr]
@@ -197,7 +191,7 @@ export class ValuesSchema extends PolymorphicSchema {
 			return value !== undefined && value !== null
 				? {
 						...output,
-						[key]: this.normalizeValue(value, input, key, entities, visitedEntities),
+						[key]: this._normalizeValue(value, input, key, entities, visitedEntities),
 				  }
 				: output
 		}, {})
@@ -223,8 +217,8 @@ export class ArraySchema extends PolymorphicSchema {
 		for(const value of values) {
 			// Special case: Arrays pass *their* parent on to their children, since there
 			// is not any special information that can be gathered from themselves directly
-			const normValue = this.normalizeValue(value, parent, key, entities, visitedEntities)
-			// TODO: what is it for, and why here and not before `normalizeValue`?
+			const normValue = this._normalizeValue(value, parent, key, entities, visitedEntities)
+			// TODO: what is it for, and why here and not before `_normalizeValue`?
 			// TODO: filtration of falsies present in tests, but not in docs, and I have no idea why the difference
 			// between [mySchema] and schema.Array(mySchema)
 			if( this.filterNullish === false || (normValue !== undefined && normValue !== null) ) {
@@ -248,7 +242,7 @@ export class UnionSchema extends PolymorphicSchema {
 		if (typeof input !== 'object' || !input) {
 			return input
 		}
-		return this.normalizeValue(input, parent, key, entities, visitedEntities)
+		return this._normalizeValue(input, parent, key, entities, visitedEntities)
 	}
 }
 
