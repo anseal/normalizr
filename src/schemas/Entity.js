@@ -27,10 +27,8 @@ export class EntitySchema {
 
 		const {
 			idAttribute = 'id',
-			mergeStrategy = (entityA, entityB) => {
-				return { ...entityA, ...entityB }
-			},
-			processStrategy = (input) => ({ ...input }),
+			mergeStrategy = (entityA, entityB) => ({ ...entityA, ...entityB }), // TODO: `Object.assign()` or even `retrun entityA` as a default
+			processStrategy = (input) => ({ ...input }), // TODO: don't copy, at least before merge/return?
 		} = options
 
 		this._key = key
@@ -70,10 +68,10 @@ export class EntitySchema {
 		if(visited(input, entityType, id)) { return id }
 
 		const processedEntity = this._processStrategy(input, parent, key)
-		Object.keys(this.schema).forEach((key) => {
-			if (processedEntity.hasOwnProperty(key) && typeof processedEntity[key] === 'object') {
+		Object.keys(this.schema).forEach((key) => { // TODO: precompile
+			if (processedEntity.hasOwnProperty(key) && typeof processedEntity[key] === 'object') { // TODO: switch places
 				const schema = this.schema[key]
-				const resolvedSchema = typeof schema === 'function' ? schema(input) : schema
+				const resolvedSchema = typeof schema === 'function' ? schema(input) : schema // TODO: function instead of if?
 				processedEntity[key] = resolvedSchema.normalize(
 					processedEntity[key],
 					processedEntity,
@@ -116,13 +114,14 @@ export class ObjectSchema {
 		if (typeof input !== 'object' || !input) {
 			return input
 		}
+		// TODO: don't copy... why do we even need this? just iterate other `input`s keys and check if there's a schema for this key
 		const object = { ...input }
-		Object.keys(this.schema).forEach((key) => {
-			const localSchema = this.schema[key]
+		Object.keys(this.schema).forEach((key) => { // TODO: precompile
+			const localSchema = this.schema[key] // TODO: DRY with `EntitySchema.normalize`
 			const resolvedLocalSchema = typeof localSchema === 'function' ? localSchema(input) : localSchema
 			const value = resolvedLocalSchema.normalize(input[key], input, key, entities, visited)
-			if (value === undefined || value === null) {
-				delete object[key]
+			if (value === undefined || value === null) { // TODO: options?
+				delete object[key] // TODO: delete's are evil
 			} else {
 				object[key] = value
 			}
@@ -147,7 +146,7 @@ class PolymorphicSchema {
 	}
 
 	_normalizeValue1(value, parent, key, entities, visited) {
-		if (!this.schema) {
+		if (!this.schema) { // TODO: _normalizeValue3?
 			return value
 		}
 		return this.schema.normalize(value, parent, key, entities, visited)
@@ -158,7 +157,7 @@ class PolymorphicSchema {
 		const attr = this._schemaAttribute(value, parent, key)
 		const schema = this.schema[attr]
 
-		if (!schema) {
+		if (!schema) { // TODO: can we precompile this?
 			return value
 		}
 		const normalizedValue = schema.normalize(value, parent, key, entities, visited)
@@ -177,7 +176,7 @@ export class ValuesSchema extends PolymorphicSchema {
 		if (typeof input !== 'object' || !input) {
 			return input
 		}
-		return Object.keys(input).reduce((output, key) => {
+		return Object.keys(input).reduce((output, key) => { // TODO: `for` insted of `reduce` & spread
 			const value = input[key]
 			return value !== undefined && value !== null
 				? {
@@ -234,6 +233,6 @@ export class UnionSchema extends PolymorphicSchema {
 		if (typeof input !== 'object' || !input) {
 			return input
 		}
-		return this._normalizeValue(input, parent, key, entities, visited)
+		return this._normalizeValue(input, parent, key, entities, visited) // TODO: something tells me that there is already a `!input` check inside
 	}
 }
