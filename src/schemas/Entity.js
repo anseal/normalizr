@@ -162,6 +162,7 @@ class PolymorphicSchema {
 
 
 	normalizeValue2(value, parent, key, entities, visitedEntities) {
+		// TODO: just a function whould be simpler compared to function & map
 		const attr = this._schemaAttribute(value, parent, key)
 		const schema = this.schema[attr]
 
