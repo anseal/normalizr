@@ -29,6 +29,7 @@
 	"typings": "index.d.ts",
 	"sideEffects": false,
 	"scripts": {
+		"PF": "node /home/nemo/Documents/work/YASS/index.js",
 		"test": "jest",
 		"test:coverage": "npm run test -- --coverage && cat ./coverage/lcov.info | coveralls"
 	},
