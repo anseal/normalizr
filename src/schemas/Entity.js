@@ -117,6 +117,9 @@ class PolymorphicSchema {
 	constructor(definition, schemaAttribute) {
 		if (schemaAttribute) {
 			this._schemaAttribute = typeof schemaAttribute === 'string' ? (input) => input[schemaAttribute] : schemaAttribute
+			this._normalize = this.normalizeValue2
+		} else {
+			this._normalize = this.normalizeValue1
 		}
 		this.define(definition)
 	}
@@ -126,21 +129,27 @@ class PolymorphicSchema {
 	}
 
 	normalizeValue(value, parent, key, entities, visitedEntities) {
-		// TODO: get rid of `let`
-		let schema
-		let attr
-		if (!this._schemaAttribute) {
-			schema = this.schema
-		} else {
-			attr = this._schemaAttribute && this._schemaAttribute(value, parent, key)
-			schema = this.schema[attr]
+		return this._normalize(value, parent, key, entities, visitedEntities)
+	}
+
+	normalizeValue1(value, parent, key, entities, visitedEntities) {
+		if (!this.schema) {
+			return value
 		}
+		const normalizedValue = visit(value, parent, key, this.schema, entities, visitedEntities)
+		return normalizedValue
+	}
+
+
+	normalizeValue2(value, parent, key, entities, visitedEntities) {
+		const attr = this._schemaAttribute(value, parent, key)
+		const schema = this.schema[attr]
 
 		if (!schema) {
 			return value
 		}
 		const normalizedValue = visit(value, parent, key, schema, entities, visitedEntities)
-		return !this._schemaAttribute || normalizedValue === undefined || normalizedValue === null
+		return normalizedValue === undefined || normalizedValue === null
 			? normalizedValue
 			: {
 				id: normalizedValue,
