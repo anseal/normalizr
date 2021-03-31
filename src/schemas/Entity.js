@@ -36,10 +36,12 @@ export class EntitySchema {
 		this.define(definition)
 	}
 
+	// TODO: remove from API? not used internally
 	get key() {
 		return this._key
 	}
 
+	// TODO: remove from API (and altogether)? not used internally
 	get idAttribute() {
 		return this._idAttribute
 	}
