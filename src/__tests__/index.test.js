@@ -125,7 +125,7 @@ describe('normalize', () => {
 			
 				const existingEntity = entitiesOfKind[id]
 				if (existingEntity) {
-					entitiesOfKind[id] = this.merge(existingEntity, entity)
+					entitiesOfKind[id] = this._mergeStrategy(existingEntity, entity)
 				} else {
 					entitiesOfKind[id] = entity
 				}

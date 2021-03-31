@@ -41,10 +41,6 @@ export class EntitySchema {
 		return this._getId(input, parent, key)
 	}
 
-	merge(entityA, entityB) {
-		return this._mergeStrategy(entityA, entityB)
-	}
-
 	normalize(input, parent, key, entities, visitedEntities) {
 		const id = this.getId(input, parent, key)
 		const entityType = this.key
@@ -83,7 +79,7 @@ export class EntitySchema {
 	
 		const existingEntity = entitiesOfKind[id]
 		if (existingEntity) {
-			entitiesOfKind[id] = this.merge(existingEntity, processedEntity)
+			entitiesOfKind[id] = this._mergeStrategy(existingEntity, processedEntity)
 		} else {
 			entitiesOfKind[id] = processedEntity
 		}
