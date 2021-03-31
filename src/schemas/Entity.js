@@ -83,11 +83,10 @@ export class EntitySchema {
 			if (processedEntity.hasOwnProperty(key) && typeof processedEntity[key] === 'object') {
 				const schema = this.schema[key]
 				const resolvedSchema = typeof schema === 'function' ? schema(input) : schema
-				processedEntity[key] = visit(
+				processedEntity[key] = resolvedSchema.normalize(
 					processedEntity[key],
 					processedEntity,
 					key,
-					resolvedSchema,
 					entities,
 					visitedEntities
 				)
@@ -130,7 +129,7 @@ export class ObjectSchema {
 		Object.keys(this.schema).forEach((key) => {
 			const localSchema = this.schema[key]
 			const resolvedLocalSchema = typeof localSchema === 'function' ? localSchema(input) : localSchema
-			const value = visit(input[key], input, key, resolvedLocalSchema, entities, visitedEntities)
+			const value = resolvedLocalSchema.normalize(input[key], input, key, entities, visitedEntities)
 			if (value === undefined || value === null) {
 				delete object[key]
 			} else {
@@ -164,7 +163,7 @@ class PolymorphicSchema {
 		if (!this.schema) {
 			return value
 		}
-		const normalizedValue = visit(value, parent, key, this.schema, entities, visitedEntities)
+		const normalizedValue = this.schema.normalize(value, parent, key, entities, visitedEntities)
 		return normalizedValue
 	}
 
@@ -177,7 +176,7 @@ class PolymorphicSchema {
 		if (!schema) {
 			return value
 		}
-		const normalizedValue = visit(value, parent, key, schema, entities, visitedEntities)
+		const normalizedValue = schema.normalize(value, parent, key, entities, visitedEntities)
 		return normalizedValue === undefined || normalizedValue === null
 			? normalizedValue
 			: {
@@ -251,10 +250,6 @@ export class UnionSchema extends PolymorphicSchema {
 		}
 		return this.normalizeValue(input, parent, key, entities, visitedEntities)
 	}
-}
-
-export const visit = (value, parent, key, schema, entities, visitedEntities) => {
-	return schema.normalize(value, parent, key, entities, visitedEntities)
 }
 
 export const getValues = (input) => (Array.isArray(input) ? input : Object.keys(input).map((key) => input[key]))

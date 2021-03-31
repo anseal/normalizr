@@ -1,5 +1,5 @@
 // eslint-env jest
-import { compileSchema, visit } from '../schemas/Entity.js'
+import { compileSchema } from '../schemas/Entity.js'
 import { normalize, schema } from '../'
 
 describe('normalize', () => {
@@ -112,8 +112,7 @@ describe('normalize', () => {
 				const entity = { ...input }
 				Object.keys(this.schema).forEach((key) => {
 					const schema = this.schema[key]
-					// TODO: inherit visit?
-					entity[key] = visit(input[key], input, key, schema, entities, visitedEntities)
+					entity[key] = schema.normalize(input[key], input, key, entities, visitedEntities)
 				})
 				// TODO: inherit this part from `EntitySchema.normalize`?
 				const entityType = this.key
