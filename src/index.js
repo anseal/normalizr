@@ -21,6 +21,34 @@ export const normalize = (input, schema) => {
 	const entities = {}
 	const visitedEntities = {}
 
-	const result = compileSchema(schema).normalize(input, input, null, entities, visitedEntities)
+	const visited = (input, entityType, id) => {
+		//*
+		// if (!(entityType in visitedEntities)) {
+		// 	visitedEntities[entityType] = {}
+		// }
+		// if (!(id in visitedEntities[entityType])) {
+		// 	visitedEntities[entityType][id] = new Set()
+		// }
+		// if (visitedEntities[entityType][id].has(input)) {
+		// 	return true
+		// }
+		// visitedEntities[entityType][id].add(input)
+		// eslint-disable-next-line spaced-comment
+		/*/
+		if (!(entityType in visitedEntities)) {
+			visitedEntities[entityType] = {}
+		}
+		if (!(id in visitedEntities[entityType])) {
+			visitedEntities[entityType][id] = []
+		}
+		if (visitedEntities[entityType][id].some((entity) => entity === input)) {
+			return true
+		}
+		visitedEntities[entityType][id].push(input)
+		//*/
+		return false
+	}
+	
+	const result = compileSchema(schema).normalize(input, input, null, entities, visited)
 	return { entities, result }
 }

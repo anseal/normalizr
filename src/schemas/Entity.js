@@ -59,7 +59,7 @@ export class EntitySchema {
 		return this._getId(input, parent, key)
 	}
 
-	normalize(input, parent, key, entities, visitedEntities) {
+	normalize(input, parent, key, entities, visited) {
 		// TODO: why `!input` and not `input === null` ? because `0` will be returned and `1` will be `normalize`d
 		if (typeof input !== 'object' || !input) {
 			return input
@@ -67,16 +67,7 @@ export class EntitySchema {
 		const id = this.getId(input, parent, key)
 		const entityType = this.key
 
-		if (!(entityType in visitedEntities)) {
-			visitedEntities[entityType] = {}
-		}
-		if (!(id in visitedEntities[entityType])) {
-			visitedEntities[entityType][id] = []
-		}
-		if (visitedEntities[entityType][id].some((entity) => entity === input)) {
-			return id
-		}
-		visitedEntities[entityType][id].push(input)
+		if(visited(input, entityType, id)) { return id }
 
 		const processedEntity = this._processStrategy(input, parent, key)
 		Object.keys(this.schema).forEach((key) => {
@@ -88,7 +79,7 @@ export class EntitySchema {
 					processedEntity,
 					key,
 					entities,
-					visitedEntities
+					visited
 				)
 			}
 		})
@@ -120,7 +111,7 @@ export class ObjectSchema {
 		this.schema = Object.assign(this.schema || {}, definition);
 	}
 
-	normalize(input, parent, key, entities, visitedEntities) {
+	normalize(input, parent, key, entities, visited) {
 		// TODO: why `!input` and not `input === null` ? because `0` will be returned and `1` will be `normalize`d
 		if (typeof input !== 'object' || !input) {
 			return input
@@ -129,7 +120,7 @@ export class ObjectSchema {
 		Object.keys(this.schema).forEach((key) => {
 			const localSchema = this.schema[key]
 			const resolvedLocalSchema = typeof localSchema === 'function' ? localSchema(input) : localSchema
-			const value = resolvedLocalSchema.normalize(input[key], input, key, entities, visitedEntities)
+			const value = resolvedLocalSchema.normalize(input[key], input, key, entities, visited)
 			if (value === undefined || value === null) {
 				delete object[key]
 			} else {
@@ -155,14 +146,14 @@ class PolymorphicSchema {
 		this.schema = definition
 	}
 
-	_normalizeValue1(value, parent, key, entities, visitedEntities) {
+	_normalizeValue1(value, parent, key, entities, visited) {
 		if (!this.schema) {
 			return value
 		}
-		return this.schema.normalize(value, parent, key, entities, visitedEntities)
+		return this.schema.normalize(value, parent, key, entities, visited)
 	}
 
-	_normalizeValue2(value, parent, key, entities, visitedEntities) {
+	_normalizeValue2(value, parent, key, entities, visited) {
 		// TODO: just a function whould be simpler compared to function & map
 		const attr = this._schemaAttribute(value, parent, key)
 		const schema = this.schema[attr]
@@ -170,7 +161,7 @@ class PolymorphicSchema {
 		if (!schema) {
 			return value
 		}
-		const normalizedValue = schema.normalize(value, parent, key, entities, visitedEntities)
+		const normalizedValue = schema.normalize(value, parent, key, entities, visited)
 		return normalizedValue === undefined || normalizedValue === null
 			? normalizedValue
 			: {
@@ -181,7 +172,7 @@ class PolymorphicSchema {
 }
 
 export class ValuesSchema extends PolymorphicSchema {
-	normalize(input, parent, key, entities, visitedEntities) {
+	normalize(input, parent, key, entities, visited) {
 		// TODO: why `!input` and not `input === null` ? because `0` will be returned and `1` will be `normalize`d
 		if (typeof input !== 'object' || !input) {
 			return input
@@ -191,7 +182,7 @@ export class ValuesSchema extends PolymorphicSchema {
 			return value !== undefined && value !== null
 				? {
 						...output,
-						[key]: this._normalizeValue(value, input, key, entities, visitedEntities),
+						[key]: this._normalizeValue(value, input, key, entities, visited),
 				  }
 				: output
 		}, {})
@@ -203,7 +194,7 @@ export class ArraySchema extends PolymorphicSchema {
 		super(definition, schemaAttribute)
 		this.filterNullish = filterNullish
 	}
-	normalize(input, parent, key, entities, visitedEntities) {
+	normalize(input, parent, key, entities, visited) {
 		// TODO: why `!input` and not `input === null` ? because `0` will be returned and `1` will be `normalize`d
 		if (typeof input !== 'object' || !input) {
 			return input
@@ -218,7 +209,7 @@ export class ArraySchema extends PolymorphicSchema {
 		for(const value of input) {
 			// Special case: Arrays pass *their* parent on to their children, since there
 			// is not any special information that can be gathered from themselves directly
-			const normValue = this._normalizeValue(value, parent, key, entities, visitedEntities)
+			const normValue = this._normalizeValue(value, parent, key, entities, visited)
 			// TODO: what is it for, and why here and not before `_normalizeValue`?
 			// TODO: filtration of falsies present in tests, but not in docs, and I have no idea why the difference
 			// between [mySchema] and schema.Array(mySchema)
@@ -238,11 +229,11 @@ export class UnionSchema extends PolymorphicSchema {
 		super(definition, schemaAttribute)
 	}
 
-	normalize(input, parent, key, entities, visitedEntities) {
+	normalize(input, parent, key, entities, visited) {
 		// TODO: why `!input` and not `input === null` ? because `0` will be returned and `1` will be `normalize`d
 		if (typeof input !== 'object' || !input) {
 			return input
 		}
-		return this._normalizeValue(input, parent, key, entities, visitedEntities)
+		return this._normalizeValue(input, parent, key, entities, visited)
 	}
 }
