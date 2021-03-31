@@ -172,7 +172,10 @@ export class ValuesSchema extends PolymorphicSchema {
 			return input
 		}
 		const output = {}
-		for(const key in input) { // TODO: hasOwnProperty?
+		for(const key in input) {
+			if( input.hasOwnProperty(key) === false ) { // TODO: doesn't looks like it degrades perf much
+				continue
+			}
 			const value = input[key]
 			if( value !== undefined && value !== null ) {
 				output[key] = this._normalizeValue(value, input, key, entities, visited)
