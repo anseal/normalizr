@@ -172,9 +172,9 @@ export class ValuesSchema extends PolymorphicSchema {
 }
 
 export class ArraySchema extends PolymorphicSchema {
-	constructor(definition, schemaAttribute, filterFalsies = true) {
+	constructor(definition, schemaAttribute, filterNullish = true) {
 		super(definition, schemaAttribute)
-		this.filterFalsies = filterFalsies
+		this.filterNullish = filterNullish
 	}
 	normalize(input, parent, key, entities, visitedEntities) {
 		// TODO: what is it for? in denormalization - probably. but here... why? maybe replace with
@@ -190,7 +190,7 @@ export class ArraySchema extends PolymorphicSchema {
 			// TODO: what is it for, and why here and not before `normalizeValue`?
 			// TODO: filtration of falsies present in tests, but not in docs, and I have no idea why the difference
 			// between [mySchema] and schema.Array(mySchema)
-			if( this.filterFalsies === false || (normValue !== undefined && normValue !== null) ) {
+			if( this.filterNullish === false || (normValue !== undefined && normValue !== null) ) {
 				normArray.push(normValue)
 			}
 		}
