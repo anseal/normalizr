@@ -208,13 +208,14 @@ export class ArraySchema extends PolymorphicSchema {
 		if (typeof input !== 'object' || !input) {
 			return input
 		}
-		// TODO: what is it for? in denormalization - probably. but here... why? maybe replace with
-		// const values = input
-		const values = getValues(input)
+		// TODO: what is it for? maybe change API and remove?
+		if( Array.isArray(input) === false ) {
+			input = Object.keys(input).map((key) => input[key]) // TODO: Object.values()
+		}
 
 		// TODO: preallocate, and then cut by length?
 		const normArray = []
-		for(const value of values) {
+		for(const value of input) {
 			// Special case: Arrays pass *their* parent on to their children, since there
 			// is not any special information that can be gathered from themselves directly
 			const normValue = this._normalizeValue(value, parent, key, entities, visitedEntities)
@@ -245,5 +246,3 @@ export class UnionSchema extends PolymorphicSchema {
 		return this._normalizeValue(input, parent, key, entities, visitedEntities)
 	}
 }
-
-export const getValues = (input) => (Array.isArray(input) ? input : Object.keys(input).map((key) => input[key]))
