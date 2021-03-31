@@ -121,10 +121,6 @@ class PolymorphicSchema {
 		this.define(definition)
 	}
 
-	get isSingleSchema() {
-		return !this._schemaAttribute
-	}
-
 	define(definition) {
 		this.schema = definition
 	}
@@ -133,10 +129,10 @@ class PolymorphicSchema {
 		// TODO: get rid of `let`
 		let schema
 		let attr
-		if (this.isSingleSchema) {
+		if (!this._schemaAttribute) {
 			schema = this.schema
 		} else {
-			attr = !this.isSingleSchema && this._schemaAttribute(value, parent, key)
+			attr = this._schemaAttribute && this._schemaAttribute(value, parent, key)
 			schema = this.schema[attr]
 		}
 
@@ -144,7 +140,7 @@ class PolymorphicSchema {
 			return value
 		}
 		const normalizedValue = visit(value, parent, key, schema, entities, visitedEntities)
-		return this.isSingleSchema || normalizedValue === undefined || normalizedValue === null
+		return !this._schemaAttribute || normalizedValue === undefined || normalizedValue === null
 			? normalizedValue
 			: {
 				id: normalizedValue,
