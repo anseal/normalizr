@@ -60,6 +60,10 @@ export class EntitySchema {
 	}
 
 	normalize(input, parent, key, entities, visitedEntities) {
+		// TODO: why `!input` and not `input === null` ? because `0` will be returned and `1` will be `normalize`d
+		if (typeof input !== 'object' || !input) {
+			return input
+		}
 		const id = this.getId(input, parent, key)
 		const entityType = this.key
 
@@ -118,6 +122,10 @@ export class ObjectSchema {
 	}
 
 	normalize(input, parent, key, entities, visitedEntities) {
+		// TODO: why `!input` and not `input === null` ? because `0` will be returned and `1` will be `normalize`d
+		if (typeof input !== 'object' || !input) {
+			return input
+		}
 		const object = { ...input }
 		Object.keys(this.schema).forEach((key) => {
 			const localSchema = this.schema[key]
@@ -181,6 +189,10 @@ class PolymorphicSchema {
 
 export class ValuesSchema extends PolymorphicSchema {
 	normalize(input, parent, key, entities, visitedEntities) {
+		// TODO: why `!input` and not `input === null` ? because `0` will be returned and `1` will be `normalize`d
+		if (typeof input !== 'object' || !input) {
+			return input
+		}
 		return Object.keys(input).reduce((output, key) => {
 			const value = input[key]
 			return value !== undefined && value !== null
@@ -199,6 +211,10 @@ export class ArraySchema extends PolymorphicSchema {
 		this.filterNullish = filterNullish
 	}
 	normalize(input, parent, key, entities, visitedEntities) {
+		// TODO: why `!input` and not `input === null` ? because `0` will be returned and `1` will be `normalize`d
+		if (typeof input !== 'object' || !input) {
+			return input
+		}
 		// TODO: what is it for? in denormalization - probably. but here... why? maybe replace with
 		// const values = input
 		const values = getValues(input)
@@ -229,16 +245,15 @@ export class UnionSchema extends PolymorphicSchema {
 	}
 
 	normalize(input, parent, key, entities, visitedEntities) {
+		// TODO: why `!input` and not `input === null` ? because `0` will be returned and `1` will be `normalize`d
+		if (typeof input !== 'object' || !input) {
+			return input
+		}
 		return this.normalizeValue(input, parent, key, entities, visitedEntities)
 	}
 }
 
 export const visit = (value, parent, key, schema, entities, visitedEntities) => {
-	// TODO: why `!value` and not `value === null` ? because `0` will be returned and `1` will be `normalize`d
-	if (typeof value !== 'object' || !value) {
-		return value
-	}
-
 	return schema.normalize(value, parent, key, entities, visitedEntities)
 }
 
