@@ -1,4 +1,4 @@
-import { ArraySchema, EntitySchema, ObjectSchema, UnionSchema, ValuesSchema, visit } from './schemas/Entity'
+import { ArraySchema, EntitySchema, ObjectSchema, UnionSchema, ValuesSchema, visit } from './schemas/Entity.js'
 
 export const schema = {
 	Array: ArraySchema,

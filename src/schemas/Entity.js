@@ -1,4 +1,4 @@
-import { isImmutable } from './ImmutableUtils'
+import { isImmutable } from './ImmutableUtils.js'
 
 const getDefaultGetId = (idAttribute) => (input) =>
 	isImmutable(input) ? input.get(idAttribute) : input[idAttribute]
