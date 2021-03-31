@@ -1,4 +1,4 @@
-import { ArraySchema, EntitySchema, ObjectSchema, UnionSchema, ValuesSchema, visit } from './schemas/Entity.js'
+import { ArraySchema, compileSchema, EntitySchema, ObjectSchema, UnionSchema, ValuesSchema, visit } from './schemas/Entity.js'
 
 export const schema = {
 	Array: ArraySchema,
@@ -21,6 +21,6 @@ export const normalize = (input, schema) => {
 	const entities = {}
 	const visitedEntities = {}
 
-	const result = visit(input, input, null, schema, entities, visitedEntities)
+	const result = visit(input, input, null, compileSchema(schema), entities, visitedEntities)
 	return { entities, result }
 }

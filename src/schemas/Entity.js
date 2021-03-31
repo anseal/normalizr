@@ -3,6 +3,22 @@ import { isImmutable } from './ImmutableUtils.js'
 const getDefaultGetId = (idAttribute) => (input) =>
 	isImmutable(input) ? input.get(idAttribute) : input[idAttribute]
 
+export const compileSchema = (schema) => {
+	// TODO: looks like monkey-patching
+	if (typeof schema === 'object' && (!schema.normalize || typeof schema.normalize !== 'function')) {
+		if( Array.isArray(schema) ) {
+			// TODO: schema.length === 0 ?
+			if (schema.length > 1) {
+				throw new Error(`Expected schema definition to be a single schema, but found ${schema.length}.`)
+			}
+			schema = new ArraySchema(schema[0], undefined, false)
+		} else {
+			schema = new ObjectSchema(schema)
+		}
+	}
+	return schema
+}
+
 export class EntitySchema {
 	constructor(key, definition = {}, options = {}) {
 		if (!key || typeof key !== 'string') {
@@ -34,6 +50,8 @@ export class EntitySchema {
 	}
 
 	define(definition) {
+		// TODO: check if `definition` is an object?
+		for(const key in definition) { definition[key] = compileSchema(definition[key]) }
 		this.schema = Object.assign(this.schema || {}, definition);
 	}
 
@@ -92,8 +110,10 @@ export class ObjectSchema {
 		this.define(definition)
 	}
 
-	// TODO: DRY with EntitySchema.define
+	// TODO: DRY with EntitySchema.define?
+	// TODO: now there is a difference, should we compile children schemas and should there be more tests?
 	define(definition) {
+		// TODO: check if `definition` is an object?
 		this.schema = Object.assign(this.schema || {}, definition);
 	}
 
@@ -218,21 +238,7 @@ export const visit = (value, parent, key, schema, entities, visitedEntities) => 
 		return value
 	}
 
-	// TODO: I suppose this is for [schema] and {schema} shortcuts... but it has a flavor of monkey-patching
-	if (typeof schema === 'object' && (!schema.normalize || typeof schema.normalize !== 'function')) {
-		schema = Array.isArray(schema) ? new ArraySchema(validateSchema(schema), undefined, false) : new ObjectSchema(schema)
-	}
-
 	return schema.normalize(value, parent, key, entities, visitedEntities)
 }
 
 export const getValues = (input) => (Array.isArray(input) ? input : Object.keys(input).map((key) => input[key]))
-
-export const validateSchema = (definition) => {
-	const isArray = Array.isArray(definition)
-	if (isArray && definition.length > 1) {
-		throw new Error(`Expected schema definition to be a single schema, but found ${definition.length}.`)
-	}
-
-	return definition[0]
-}

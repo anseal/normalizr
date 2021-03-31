@@ -1,5 +1,5 @@
 // eslint-env jest
-import { visit } from '../schemas/Entity.js'
+import { compileSchema, visit } from '../schemas/Entity.js'
 import { normalize, schema } from '../'
 
 describe('normalize', () => {
@@ -101,7 +101,7 @@ describe('normalize', () => {
 	test('can use fully custom entity classes', () => {
 		class MyEntity extends schema.Entity {
 			schema = {
-				children: [new schema.Entity('children')],
+				children: compileSchema([new schema.Entity('children')]),
 			}
 
 			getId(entity, parent, key) {
