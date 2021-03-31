@@ -97,6 +97,7 @@ describe('normalize', () => {
 		expect(normalize([false], [myEntity])).toMatchSnapshot()
 	})
 
+	// TODO: remove? basically it tests that a user can break encapsulation. why whould we allow this?!
 	test('can use fully custom entity classes', () => {
 		class MyEntity extends schema.Entity {
 			schema = {
