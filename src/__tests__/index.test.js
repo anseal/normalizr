@@ -41,7 +41,7 @@ describe('normalize', () => {
 		const input = { id: 123, friends: [] }
 		input.friends.push(input)
 
-		expect(normalize(input, user)).toMatchSnapshot()
+		expect(normalize(input, user, true)).toMatchSnapshot()
 	})
 
 	test('normalizes nested entities', () => {

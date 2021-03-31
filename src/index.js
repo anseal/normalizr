@@ -8,7 +8,7 @@ export const schema = {
 	Values: ValuesSchema,
 }
 
-export const normalize = (input, schema) => {
+export const normalize = (input, schema, circularDependencies = false) => {
 	// TODO: not sure why we should throw here but not deeper in the tree (there we just return value)
 	if (!input || typeof input !== 'object') {
 		throw new Error(
@@ -21,18 +21,18 @@ export const normalize = (input, schema) => {
 	const entities = {}
 	const visitedEntities = {}
 
-	const visited = (input, entityType, id) => {
+	const visited = circularDependencies ? (input, entityType, id) => {
 		//*
-		// if (!(entityType in visitedEntities)) {
-		// 	visitedEntities[entityType] = {}
-		// }
-		// if (!(id in visitedEntities[entityType])) {
-		// 	visitedEntities[entityType][id] = new Set()
-		// }
-		// if (visitedEntities[entityType][id].has(input)) {
-		// 	return true
-		// }
-		// visitedEntities[entityType][id].add(input)
+		if (!(entityType in visitedEntities)) {
+			visitedEntities[entityType] = {}
+		}
+		if (!(id in visitedEntities[entityType])) {
+			visitedEntities[entityType][id] = new Set()
+		}
+		if (visitedEntities[entityType][id].has(input)) {
+			return true
+		}
+		visitedEntities[entityType][id].add(input)
 		// eslint-disable-next-line spaced-comment
 		/*/
 		if (!(entityType in visitedEntities)) {
@@ -47,7 +47,7 @@ export const normalize = (input, schema) => {
 		visitedEntities[entityType][id].push(input)
 		//*/
 		return false
-	}
+	} : () => false
 	
 	const result = compileSchema(schema).normalize(input, input, null, entities, visited)
 	return { entities, result }
