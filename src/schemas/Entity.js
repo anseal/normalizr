@@ -109,19 +109,25 @@ export class ObjectSchema {
 		if (typeof input !== 'object' || !input) {
 			return input
 		}
-		// TODO: don't copy... why do we even need this? just iterate other `input`s keys and check if there's a schema for this key
-		const object = { ...input }
-		for(const key in this.schema) {
-			const localSchema = this.schema[key] // TODO: DRY with `EntitySchema.normalize`
-			const resolvedLocalSchema = typeof localSchema === 'function' ? localSchema(input) : localSchema
-			const value = resolvedLocalSchema.normalize(input[key], input, key, entities, visited)
-			if (value === undefined || value === null) { // TODO: options?
-				delete object[key] // TODO: delete's are evil
+		// TODO: DRY with `EntitySchema.normalize`
+		// TODO: + _processStrategy ?
+		const output = {}
+		for(const key in input) {
+			if( input.hasOwnProperty(key) === false ) { // TODO: doesn't looks like it degrades perf much
+				continue
+			}
+			const localSchema = this.schema[key]
+			if( localSchema ) {
+				const resolvedLocalSchema = typeof localSchema === 'function' ? localSchema(input) : localSchema
+				const value = resolvedLocalSchema.normalize(input[key], input, key, entities, visited)
+				if (value !== undefined && value !== null) { // TODO: options?
+					output[key] = value
+				}
 			} else {
-				object[key] = value
+				output[key] = input[key]
 			}
 		}
-		return object
+		return output
 	}
 }
 
