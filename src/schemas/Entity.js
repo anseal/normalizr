@@ -231,10 +231,6 @@ export class UnionSchema extends PolymorphicSchema {
 	}
 
 	normalize(input, parent, key, entities, visited) {
-		// TODO: why `!input` and not `input === null` ? because `0` will be returned and `1` will be `normalize`d
-		if (typeof input !== 'object' || !input) {
-			return input
-		}
-		return this._normalizeValue(input, parent, key, entities, visited) // TODO: something tells me that there is already a `!input` check inside
+		return this._normalizeValue(input, parent, key, entities, visited)
 	}
 }
