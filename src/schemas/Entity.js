@@ -149,9 +149,6 @@ class PolymorphicSchema {
 	}
 
 	_normalizeValue1(value, parent, key, entities, visited) {
-		if (!this.schema) { // TODO: _normalizeValue3?
-			return value
-		}
 		return this.schema.normalize(value, parent, key, entities, visited)
 	}
 
