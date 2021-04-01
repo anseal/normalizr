@@ -24,7 +24,8 @@ export class EntitySchema {
 
 		const {
 			idAttribute = 'id',
-			mergeStrategy = (entityA, entityB) => ({ ...entityA, ...entityB }), // TODO: `Object.assign()` or even `retrun entityA` as a default
+			mergeStrategy = (entityA, entityB) => Object.assign(entityA, entityB), // TODO: or even `retrun entityA` as a default
+			// mergeStrategy = (entityA, entityB) => ({ ...entityA, ...entityB }),
 			processStrategy = (input) => ({ ...input }), // TODO: don't copy, at least before merge/return?
 		} = options
 
