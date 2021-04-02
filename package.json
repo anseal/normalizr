@@ -24,8 +24,7 @@
 		"LICENSE",
 		"README.md"
 	],
-	"main": "dist/normalizr.js",
-	"module": "dist/normalizr.es.js",
+	"main": "index.js",
 	"typings": "index.d.ts",
 	"sideEffects": false,
 	"scripts": {

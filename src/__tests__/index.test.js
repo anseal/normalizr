@@ -1,6 +1,5 @@
 // eslint-env jest
-import { compileSchema } from '../schemas/Entity.js'
-import { normalize, schema } from '../'
+import { compileSchema, normalize, schema } from '../'
 
 describe('normalize', () => {
 	;[42, null, undefined, '42', () => {}].forEach((input) => {
