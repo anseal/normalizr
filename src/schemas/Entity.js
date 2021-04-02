@@ -27,6 +27,7 @@ export class EntitySchema {
 			mergeStrategy = (entityA, entityB) => Object.assign(entityA, entityB), // TODO: or even `retrun entityA` as a default
 			// mergeStrategy = (entityA, entityB) => ({ ...entityA, ...entityB }),
 			processStrategy = (input) => ({ ...input }), // TODO: don't copy, at least before merge/return?
+			// processStrategy = (input) => input, // TODO: don't copy, at least before merge/return?
 		} = options
 
 		this._key = key
@@ -64,8 +65,12 @@ export class EntitySchema {
 
 		if(visited(input, entityType, id)) { return id }
 
+		// TODO: default Strategy - copy over existingEntity ?
 		const processedEntity = this._processStrategy(input, parent, key)
 		for(const key in this.schema) {
+			// TODO: do we need this? all tests are passing
+			// it looks like optimizations... but in reality it looks like perf is dropping
+			// if (typeof processedEntity[key] === 'object' && processedEntity.hasOwnProperty(key)) { // TODO: switch places
 			if (processedEntity.hasOwnProperty(key) && typeof processedEntity[key] === 'object') { // TODO: switch places
 				const schema = this.schema[key]
 				const resolvedSchema = typeof schema === 'function' ? schema(input) : schema // TODO: function instead of if?
@@ -79,6 +84,10 @@ export class EntitySchema {
 			}
 		}
 
+		// TODO: check the presence first
+		// then check if there would be any merge or it just `identity()` function
+		// and in the latter case skip normalization entirely
+		// TODO: preallocate all `entityType`s?
 		if (entityType in entities === false) {
 			entities[entityType] = {}
 		}
@@ -123,6 +132,9 @@ export class ObjectSchema {
 			if( localSchema ) {
 				const resolvedLocalSchema = typeof localSchema === 'function' ? localSchema(input) : localSchema
 				const value = resolvedLocalSchema.normalize(input[key], input, key, entities, visited)
+				// TODO: there're only two cases when it can return null|unefined
+				// 1) [null, value, ...]
+				// 2) if( !schema ) return input
 				if (value !== undefined && value !== null) { // TODO: options?
 					output[key] = value
 				}
@@ -179,10 +191,12 @@ export class ValuesSchema extends PolymorphicSchema {
 		}
 		const output = {}
 		for(const key in input) {
-			if( input.hasOwnProperty(key) === false ) { // TODO: doesn't looks like it degrades perf much
+			if( input.hasOwnProperty(key) === false ) { // TODO: doesn't looks like it degrades perf much, but anyway - try to move after !value checks
 				continue
 			}
 			const value = input[key]
+			// TODO: ? if( typeof value === 'object' && value !== null ) ... else if( value !== undefined && value !== ... ) output[key] = value
+			// TODO: ? normValue = this._normalizeValue(value, input, key, entities, visited); if( cond(normValue) ) output[key] = normValue
 			if( value !== undefined && value !== null ) {
 				output[key] = this._normalizeValue(value, input, key, entities, visited)
 			}
@@ -223,6 +237,7 @@ export class ArraySchema extends PolymorphicSchema {
 	}
 }
 
+// TODO: this one has meaning only with _normalizeValue2
 export class UnionSchema extends PolymorphicSchema {
 	constructor(definition, schemaAttribute) {
 		if (!schemaAttribute) {
