@@ -20,7 +20,7 @@ function isImmutable(object) {
 }
 
 // export only for that bad test
-export const compileSchema = (schema) => {
+const compileSchema = (schema) => {
 	// TODO: looks like monkey-patching
 	if (typeof schema === 'object' && (!schema.normalize || typeof schema.normalize !== 'function')) {
 		if( Array.isArray(schema) ) {
@@ -271,7 +271,7 @@ class UnionSchema extends PolymorphicSchema {
 	}
 }
 
-export const schema = {
+const schema = {
 	Array: ArraySchema,
 	Entity: EntitySchema,
 	Object: ObjectSchema,
@@ -279,7 +279,7 @@ export const schema = {
 	Values: ValuesSchema,
 }
 
-export const normalize = (input, schema, circularDependencies = false) => {
+const normalize = (input, schema, circularDependencies = false) => {
 	// TODO: not sure why we should throw here but not deeper in the tree (there we just return value)
 	if (!input || typeof input !== 'object') {
 		throw new Error(
@@ -322,4 +322,10 @@ export const normalize = (input, schema, circularDependencies = false) => {
 	
 	const result = compileSchema(schema).normalize(input, input, null, entities, visited)
 	return { entities, result }
+}
+
+module.exports = {
+	compileSchema,
+	schema,
+	normalize,
 }
