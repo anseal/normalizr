@@ -36,6 +36,14 @@ export const compileSchema = (schema) => {
 	return schema
 }
 
+const noMerge = (entityA, _entityB) => entityA
+const simpleMerge = (entityA, entityB) => Object.assign(entityA, entityB)
+const defaultMerge = noMerge
+// const defaultMerge = simpleMerge
+
+// let cnt1 = 0;
+// let cnt2 = 0;
+
 class EntitySchema {
 	constructor(key, definition = {}, options = {}) {
 		if (!key || typeof key !== 'string') {
@@ -44,7 +52,7 @@ class EntitySchema {
 
 		const {
 			idAttribute = 'id',
-			mergeStrategy = (entityA, entityB) => Object.assign(entityA, entityB), // TODO: or even `retrun entityA` as a default
+			mergeStrategy = defaultMerge, // TODO: or even `retrun entityA` as a default
 			// mergeStrategy = (entityA, entityB) => ({ ...entityA, ...entityB }),
 			processStrategy = (input) => ({ ...input }), // TODO: don't copy, at least before merge/return?
 			// processStrategy = (input) => input, // TODO: don't copy, at least before merge/return?
@@ -83,6 +91,22 @@ class EntitySchema {
 		const id = this._getId(input, parent, key) // TODO: what if id === `undefined`?
 		const entityType = this._key
 
+		// TODO: check the presence first
+		// then check if there would be any merge or it just `identity()` function
+		// and in the latter case skip normalization entirely
+		// TODO: preallocate all `entityType`s?
+		if (entityType in entities === false) {
+			entities[entityType] = {}
+		}
+		const entitiesOfKind = entities[entityType]
+	
+		const existingEntity = entitiesOfKind[id]
+		if (existingEntity && this._mergeStrategy === noMerge ) {
+			// cnt1++
+			return id
+		}
+		// cnt2++
+
 		if(visited(input, entityType, id)) { return id }
 
 		// TODO: default Strategy - copy over existingEntity ?
@@ -104,16 +128,6 @@ class EntitySchema {
 			}
 		}
 
-		// TODO: check the presence first
-		// then check if there would be any merge or it just `identity()` function
-		// and in the latter case skip normalization entirely
-		// TODO: preallocate all `entityType`s?
-		if (entityType in entities === false) {
-			entities[entityType] = {}
-		}
-		const entitiesOfKind = entities[entityType]
-	
-		const existingEntity = entitiesOfKind[id]
 		if (existingEntity) {
 			entitiesOfKind[id] = this._mergeStrategy(existingEntity, processedEntity)
 		} else {
