@@ -67,9 +67,17 @@ class EntitySchema {
 		const processedEntity = this._processStrategy(input, parent, key)
 		for(const key in this.schema) {
 			// TODO: do we need this? all tests are passing
-			// it looks like optimizations... but in reality it looks like perf is dropping
+			// it looks like optimizations... but in reality perf is dropping
+			// there should be no difference because:
+			// 1) typeof === 'object' will be checked inside
+			// 2) if `hasOwnProperty(key) === false`, and the key is in the `schema` it surely looks like an error
+			//    or... we just hsouldn't care - user can define similar attributes with the help of `prototype`
+			//    and I see no reason not to let him do this
+			// 3) but if the key is not in the `schema` them we just won't get here because we iterate over `schema`'s keys,
+			//    not over `processedEntity`'s keys
+			// but the 2 point changes the API in rare but possible cases, so the removal of this if is a breaking change
 			// if (typeof processedEntity[key] === 'object' && processedEntity.hasOwnProperty(key)) { // TODO: switch places
-			if (processedEntity.hasOwnProperty(key) && typeof processedEntity[key] === 'object') { // TODO: switch places
+			// if (processedEntity.hasOwnProperty(key) && typeof processedEntity[key] === 'object') { // TODO: switch places
 				const schema = this.schema[key]
 				const resolvedSchema = typeof schema === 'function' ? schema(input) : schema // TODO: function instead of if?
 				processedEntity[key] = resolvedSchema.normalize(
@@ -79,7 +87,7 @@ class EntitySchema {
 					entities,
 					visited
 				)
-			}
+			// }
 		}
 
 		// TODO: check the presence first
