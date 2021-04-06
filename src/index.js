@@ -55,8 +55,7 @@ class EntitySchema {
 	}
 
 	normalize(input, parent, key, entities, visited) {
-		// TODO: why `!input` and not `input === null` ? because `0` will be returned and `1` will be `normalize`d
-		if (typeof input !== 'object' || !input) {
+		if (typeof input !== 'object' || input === null) {
 			return input
 		}
 		const id = this._getId(input, parent, key) // TODO: what if id === `undefined`?
@@ -116,8 +115,7 @@ class ObjectSchema {
 	}
 
 	normalize(input, parent, key, entities, visited) {
-		// TODO: why `!input` and not `input === null` ? because `0` will be returned and `1` will be `normalize`d
-		if (typeof input !== 'object' || !input) {
+		if (typeof input !== 'object' || input === null) {
 			return input
 		}
 		// TODO: DRY with `EntitySchema.normalize`
@@ -184,8 +182,7 @@ class PolymorphicSchema {
 
 class ValuesSchema extends PolymorphicSchema {
 	normalize(input, parent, key, entities, visited) {
-		// TODO: why `!input` and not `input === null` ? because `0` will be returned and `1` will be `normalize`d
-		if (typeof input !== 'object' || !input) {
+		if (typeof input !== 'object' || input === null) {
 			return input
 		}
 		const output = {}
@@ -210,8 +207,7 @@ class ArraySchema extends PolymorphicSchema {
 		this.filterNullish = filterNullish
 	}
 	normalize(input, parent, key, entities, visited) {
-		// TODO: why `!input` and not `input === null` ? because `0` will be returned and `1` will be `normalize`d
-		if (typeof input !== 'object' || !input) {
+		if (typeof input !== 'object' || input === null) {
 			return input
 		}
 		// TODO: what is it for? maybe change API and remove?
@@ -260,7 +256,7 @@ export const schema = {
 
 export const normalize = (input, schema, circularDependencies = false) => {
 	// TODO: not sure why we should throw here but not deeper in the tree (there we just return value)
-	if (!input || typeof input !== 'object') {
+	if (typeof input !== 'object' || input === null) {
 		throw new Error(
 			`Unexpected input given to normalize. Expected type to be "object", found "${
 				input === null ? 'null' : typeof input
