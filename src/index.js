@@ -1,24 +1,3 @@
-/**
- * Helpers to enable Immutable compatibility *without* bringing in
- * the 'immutable' package as a dependency.
- */
-
-/**
- * Check if an object is immutable by checking if it has a key specific
- * to the immutable library.
- *
- * @param  {any} object
- * @return {bool}
- */
-function isImmutable(object) {
-	return !!(
-		object &&
-		typeof object.hasOwnProperty === 'function' &&
-		(object.hasOwnProperty('__ownerID') || // Immutable.Map
-			(object._map && object._map.hasOwnProperty('__ownerID')))
-	) // Immutable.Record
-}
-
 // export only for that bad test
 export const compileSchema = (schema) => {
 	// TODO: looks like monkey-patching
@@ -51,7 +30,7 @@ class EntitySchema {
 		} = options
 
 		this._key = key
-		this._getId = typeof idAttribute === 'function' ? idAttribute : (input) => isImmutable(input) ? input.get(idAttribute) : input[idAttribute]
+		this._getId = typeof idAttribute === 'function' ? idAttribute : (input) => input[idAttribute]
 		this._idAttribute = idAttribute
 		this._mergeStrategy = mergeStrategy
 		this._processStrategy = processStrategy
