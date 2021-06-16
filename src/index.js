@@ -376,36 +376,6 @@ export const normalize = (input, schema, circularDependencies = false) => {
 	return { entities, result }
 }
 
-
-
-const unvisitEntity = (id, schema, unvisit, getEntity, cache) => {
-	let entity = getEntity(id, schema)
-
-	if (entity === undefined && schema instanceof EntitySchema) {
-		entity = schema.fallback(id, schema)
-	}
-
-	if (typeof entity !== 'object' || entity === null) {
-		return entity
-	}
-
-	if (!cache[schema.key]) {
-		cache[schema.key] = {}
-	}
-
-	if (!cache[schema.key][id]) {
-		// Ensure we don't mutate it non-immutable objects
-		const entityCopy = { ...entity }
-
-		// Need to set this first so that if it is referenced further within the
-		// denormalization the reference will already exist.
-		cache[schema.key][id] = entityCopy
-		cache[schema.key][id] = schema.denormalize(entityCopy, unvisit)
-	}
-
-	return cache[schema.key][id]
-}
-
 export const denormalize = (input, schema, entities) => {
 	if( input === undefined ) { return undefined }
 
@@ -431,7 +401,32 @@ export const denormalize = (input, schema, entities) => {
 		}
 
 		if (schema instanceof EntitySchema) {
-			return unvisitEntity(input, schema, unvisit, getEntity, cache)
+			const id = input
+			let entity = getEntity(id, schema)
+		
+			if (entity === undefined && schema instanceof EntitySchema) {
+				entity = schema.fallback(id, schema)
+			}
+		
+			if (typeof entity !== 'object' || entity === null) {
+				return entity
+			}
+		
+			if (!cache[schema.key]) {
+				cache[schema.key] = {}
+			}
+		
+			if (!cache[schema.key][id]) {
+				// Ensure we don't mutate it non-immutable objects
+				const entityCopy = { ...entity }
+		
+				// Need to set this first so that if it is referenced further within the
+				// denormalization the reference will already exist.
+				cache[schema.key][id] = entityCopy
+				cache[schema.key][id] = schema.denormalize(entityCopy, unvisit)
+			}
+		
+			return cache[schema.key][id]
 		}
 
 		return schema.denormalize(input, unvisit)
