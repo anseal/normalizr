@@ -107,6 +107,16 @@ class EntitySchema {
 		}
 		return id
 	}
+
+	denormalize(entity, unvisit) {
+		Object.keys(this.schema).forEach((key) => {
+			if (entity.hasOwnProperty(key)) {
+				const schema = this.schema[key]
+				entity[key] = unvisit(entity[key], schema)
+			}
+		})
+		return entity
+	}
 }
 
 class ObjectSchema {
@@ -149,6 +159,21 @@ class ObjectSchema {
 		}
 		return output
 	}
+
+	denormalize(...args) {
+		return denormalize(this.schema, ...args)
+	}
+}
+const ObjectUtils = {
+	denormalize: (schema, input, unvisit) => {
+		const object = { ...input }
+		Object.keys(schema).forEach((key) => {
+			if (object[key] != null) {
+				object[key] = unvisit(object[key], schema[key])
+			}
+		})
+		return object
+	}
 }
 
 class PolymorphicSchema {
@@ -186,6 +211,16 @@ class PolymorphicSchema {
 				schema: attr
 			}
 	}
+
+	denormalizeValue(value, unvisit) {
+		const schemaKey = value.schema
+		if (!this.isSingleSchema && !schemaKey) {
+			return value
+		}
+		const id = this.isSingleSchema ? undefined : value.id
+		const schema = this.isSingleSchema ? this.schema : this.schema[schemaKey]
+		return unvisit(id || value, schema)
+	}
 }
 
 class ValuesSchema extends PolymorphicSchema {
@@ -206,6 +241,16 @@ class ValuesSchema extends PolymorphicSchema {
 			}
 		}
 		return output
+	}
+
+	denormalize(input, unvisit) {
+		return Object.keys(input).reduce((output, key) => {
+			const entityOrId = input[key]
+			return {
+				...output,
+				[key]: this.denormalizeValue(entityOrId, unvisit),
+			}
+		}, {})
 	}
 }
 
@@ -238,6 +283,26 @@ class ArraySchema extends PolymorphicSchema {
 		}
 		return normArray
 	}
+
+	denormalize(input, unvisit) {
+		return input && input.map ? input.map((value) => this.denormalizeValue(value, unvisit)) : input
+	}
+}
+
+const validateSchema = (definition) => {
+	const isArray = Array.isArray(definition)
+	if (isArray && definition.length > 1) {
+		throw new Error(`Expected schema definition to be a single schema, but found ${definition.length}.`)
+	}
+
+	return definition[0]
+}
+
+const ArrayUtils = {
+	denormalize: (schema, input, unvisit) => {
+		schema = validateSchema(schema)
+		return input && input.map ? input.map((entityOrId) => unvisit(entityOrId, schema)) : input
+	}
 }
 
 // TODO: this one has meaning only with _normalizeValue2
@@ -251,6 +316,10 @@ class UnionSchema extends PolymorphicSchema {
 
 	normalize(input, parent, key, entities, visited) {
 		return this._normalizeValue(input, parent, key, entities, visited)
+	}
+
+	denormalize(input, unvisit) {
+		return this.denormalizeValue(input, unvisit)
 	}
 }
 
@@ -305,4 +374,68 @@ export const normalize = (input, schema, circularDependencies = false) => {
 	
 	const result = compileSchema(schema).normalize(input, input, null, entities, visited)
 	return { entities, result }
+}
+
+
+
+const unvisitEntity = (id, schema, unvisit, getEntity, cache) => {
+	let entity = getEntity(id, schema)
+
+	if (entity === undefined && schema instanceof EntitySchema) {
+		entity = schema.fallback(id, schema)
+	}
+
+	if (typeof entity !== 'object' || entity === null) {
+		return entity
+	}
+
+	if (!cache[schema.key]) {
+		cache[schema.key] = {}
+	}
+
+	if (!cache[schema.key][id]) {
+		// Ensure we don't mutate it non-immutable objects
+		const entityCopy = { ...entity }
+
+		// Need to set this first so that if it is referenced further within the
+		// denormalization the reference will already exist.
+		cache[schema.key][id] = entityCopy
+		cache[schema.key][id] = schema.denormalize(entityCopy, unvisit)
+	}
+
+	return cache[schema.key][id]
+}
+
+export const denormalize = (input, schema, entities) => {
+	if( input === undefined ) { return undefined }
+
+	const cache = {}
+	const getEntity = (entityOrId, schema) => {
+		const schemaKey = schema.key
+
+		if (typeof entityOrId === 'object') {
+			return entityOrId
+		}
+
+		return entities[schemaKey] && entities[schemaKey][entityOrId]
+	}
+
+	function unvisit(input, schema) {
+		if (typeof schema === 'object' && (!schema.denormalize || typeof schema.denormalize !== 'function')) {
+			const method = Array.isArray(schema) ? ArrayUtils.denormalize : ObjectUtils.denormalize
+			return method(schema, input, unvisit)
+		}
+
+		if (input === undefined || input === null) {
+			return input
+		}
+
+		if (schema instanceof EntitySchema) {
+			return unvisitEntity(input, schema, unvisit, getEntity, cache)
+		}
+
+		return schema.denormalize(input, unvisit)
+	}
+
+	return unvisit(input, schema)
 }

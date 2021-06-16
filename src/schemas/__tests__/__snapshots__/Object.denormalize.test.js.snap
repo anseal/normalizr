@@ -1,0 +1,28 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`ObjectSchema denormalization denormalizes an object 1`] = `
+Object {
+  "user": Object {
+    "id": 1,
+    "name": "Nacho",
+  },
+}
+`;
+
+exports[`ObjectSchema denormalization denormalizes an object that contains a property representing a an object with an id of zero 1`] = `
+Object {
+  "user": Object {
+    "id": 0,
+    "name": "Chancho",
+  },
+}
+`;
+
+exports[`ObjectSchema denormalization denormalizes plain object shorthand 1`] = `
+Object {
+  "user": Object {
+    "id": 1,
+    "name": "Jane",
+  },
+}
+`;
