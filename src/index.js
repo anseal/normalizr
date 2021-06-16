@@ -27,6 +27,7 @@ class EntitySchema {
 			// mergeStrategy = (entityA, entityB) => ({ ...entityA, ...entityB }),
 			processStrategy = (input) => ({ ...input }), // TODO: don't copy, at least before merge/return?
 			// processStrategy = (input) => input, // TODO: don't copy, at least before merge/return?
+			fallbackStrategy = (_key, _schema) => undefined,
 		} = options
 
 		this._key = key
@@ -34,6 +35,8 @@ class EntitySchema {
 		this._idAttribute = idAttribute
 		this._mergeStrategy = mergeStrategy
 		this._processStrategy = processStrategy
+		this._fallbackStrategy = fallbackStrategy
+		
 		this.define(definition)
 	}
 
@@ -402,9 +405,9 @@ export const denormalize = (input, schema, entities) => {
 			}
 
 			if (entity === undefined && schema instanceof EntitySchema) {
-				entity = schema.fallback(id, schema)
+				entity = schema._fallbackStrategy(id, schema)
 			}
-		
+
 			if (typeof entity !== 'object' || entity === null) {
 				return entity
 			}
