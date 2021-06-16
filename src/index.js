@@ -380,15 +380,6 @@ export const denormalize = (input, schema, entities) => {
 	if( input === undefined ) { return undefined }
 
 	const cache = {}
-	const getEntity = (entityOrId, schema) => {
-		const schemaKey = schema.key
-
-		if (typeof entityOrId === 'object') {
-			return entityOrId
-		}
-
-		return entities[schemaKey] && entities[schemaKey][entityOrId]
-	}
 
 	function unvisit(input, schema) {
 		if (typeof schema === 'object' && (!schema.denormalize || typeof schema.denormalize !== 'function')) {
@@ -402,8 +393,14 @@ export const denormalize = (input, schema, entities) => {
 
 		if (schema instanceof EntitySchema) {
 			const id = input
-			let entity = getEntity(id, schema)
-		
+			const schemaKey = schema.key
+			let entity
+			if (typeof id === 'object') {
+				entity = id
+			} else {
+				entity = entities[schemaKey] && entities[schemaKey][id]
+			}
+
 			if (entity === undefined && schema instanceof EntitySchema) {
 				entity = schema.fallback(id, schema)
 			}
