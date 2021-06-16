@@ -292,18 +292,15 @@ class ArraySchema extends PolymorphicSchema {
 	}
 }
 
-const validateSchema = (definition) => {
-	const isArray = Array.isArray(definition)
-	if (isArray && definition.length > 1) {
-		throw new Error(`Expected schema definition to be a single schema, but found ${definition.length}.`)
-	}
-
-	return definition[0]
-}
-
 const ArrayUtils = {
 	denormalize: (schema, input, unvisit) => {
-		schema = validateSchema(schema)
+		const isArray = Array.isArray(schema)
+		if (isArray && schema.length > 1) {
+			throw new Error(`Expected schema definition to be a single schema, but found ${schema.length}.`)
+		}
+
+		schema = schema[0]
+
 		return input && input.map ? input.map((entityOrId) => unvisit(entityOrId, schema)) : input
 	}
 }
