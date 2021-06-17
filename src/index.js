@@ -382,11 +382,6 @@ export const denormalize = (input, schema, entities) => {
 	const cache = {}
 
 	function unvisit(input, schema) {
-		if (typeof schema === 'object' && (!schema.denormalize || typeof schema.denormalize !== 'function')) {
-			const method = Array.isArray(schema) ? ArrayUtils.denormalize : ObjectUtils.denormalize
-			return method(schema, input, unvisit)
-		}
-
 		if (input === undefined || input === null) {
 			return input
 		}
@@ -426,7 +421,7 @@ export const denormalize = (input, schema, entities) => {
 			return cache[schema.key][id]
 		}
 
-		return schema.denormalize(input, unvisit)
+		return compileSchema(schema).denormalize(input, unvisit)
 	}
 
 	return unvisit(input, schema)
