@@ -288,20 +288,7 @@ class ArraySchema extends PolymorphicSchema {
 	}
 
 	denormalize(input, unvisit) {
-		return input && input.map ? input.map((value) => this.denormalizeValue(value, unvisit)) : input
-	}
-}
-
-const ArrayUtils = {
-	denormalize: (schema, input, unvisit) => {
-		const isArray = Array.isArray(schema)
-		if (isArray && schema.length > 1) {
-			throw new Error(`Expected schema definition to be a single schema, but found ${schema.length}.`)
-		}
-
-		schema = schema[0]
-
-		return input && input.map ? input.map((entityOrId) => unvisit(entityOrId, schema)) : input
+		return Array.isArray(input) ? input.map((value) => this.denormalizeValue(value, unvisit)) : input
 	}
 }
 
