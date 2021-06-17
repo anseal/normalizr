@@ -1,13 +1,13 @@
 {
-	"name": "normalizr",
-	"version": "3.6.1",
+	"name": "normalizr-ex",
+	"version": "1.0.0",
 	"description": "Normalizes and denormalizes JSON according to schema for Redux and Flux applications",
 	"bugs": {
-		"url": "https://github.com/paularmstrong/normalizr/issues"
+		"url": "https://github.com/anseal/normalizr/issues"
 	},
-	"homepage": "https://github.com/paularmstrong/normalizr",
+	"homepage": "https://github.com/anseal/normalizr.git",
 	"repository": {
-		"url": "https://github.com/paularmstrong/normalizr.git",
+		"url": "https://github.com/anseal/normalizr.git",
 		"type": "git"
 	},
 	"keywords": [
@@ -26,44 +26,31 @@
 	],
 	"main": "src/index.js",
 	"typings": "index.d.ts",
+	"type": "module",
 	"sideEffects": false,
 	"scripts": {
 		"PF": "node /home/nemo/Documents/work/YASS/index.js",
 		"test": "jest",
-		"test:coverage": "npm run test -- --coverage && cat ./coverage/lcov.info | coveralls"
+		"test:coverage": "npm run test -- --coverage"
 	},
-	"author": "Paul Armstrong",
-	"contributors": [
-		"Dan Abramov"
-	],
+	"author": "anseal",
 	"license": "MIT",
 	"devDependencies": {
 		"@babel/core": "^7.0.0",
 		"@babel/plugin-proposal-class-properties": "^7.0.0",
 		"@babel/plugin-proposal-object-rest-spread": "^7.0.0",
 		"@babel/preset-env": "^7.0.0",
-		"@babel/preset-flow": "^7.0.0",
 		"babel-eslint": "^10.0.1",
 		"babel-jest": "^26.5.2",
-		"coveralls": "^3.1.0",
 		"eslint": "^7.11.0",
 		"eslint-config-prettier": "^6.13.0",
 		"eslint-plugin-jest": "^24.1.0",
 		"eslint-plugin-json": "^2.1.2",
 		"eslint-plugin-prettier": "^3.1.4",
-		"flow-bin": "^0.136.0",
 		"husky": "^2.3.0",
-		"immutable": "^3.8.1",
 		"jest": "^26.5.3",
 		"lint-staged": "^8.1.7",
-		"npm-run-all": "^4.1.5",
 		"prettier": "^2.1.2",
-		"rimraf": "^3.0.2",
-		"rollup": "^2.32.0",
-		"rollup-plugin-babel": "^4.4.0",
-		"rollup-plugin-filesize": "^9.0.2",
-		"rollup-plugin-terser": "^7.0.2",
 		"typescript": "^3.4.5"
-	},
-	"dependencies": {}
+	}
 }
