@@ -163,8 +163,8 @@ class ObjectSchema {
 		return output
 	}
 
-	denormalize(...args) {
-		return denormalize(this.schema, ...args)
+	denormalize(input, unvisit) {
+		return ObjectUtils.denormalize(this.schema, input, unvisit)
 	}
 }
 const ObjectUtils = {
