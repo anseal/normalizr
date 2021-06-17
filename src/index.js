@@ -192,6 +192,7 @@ class PolymorphicSchema {
 		if (schemaAttribute) {
 			this._schemaAttribute = typeof schemaAttribute === 'string' ? (input) => input[schemaAttribute] : schemaAttribute
 			this._normalizeValue = this._normalizeValue2
+			for(const key in definition) { definition[key] = compileSchema(definition[key]) }
 		} else {
 			this._normalizeValue = this._normalizeValue1
 		}
@@ -416,8 +417,8 @@ export const denormalize = (input, schema, entities) => {
 			return cache[schema.key][id]
 		}
 
-		return compileSchema(schema).denormalize(input, unvisit)
+		return schema.denormalize(input, unvisit)
 	}
 
-	return unvisit(input, schema)
+	return unvisit(input, compileSchema(schema))
 }
