@@ -217,11 +217,11 @@ class PolymorphicSchema {
 
 	denormalizeValue(value, unvisit) {
 		const schemaKey = value.schema
-		if (!this.isSingleSchema && !schemaKey) {
+		if (this._schemaAttribute && !schemaKey) {
 			return value
 		}
-		const id = this.isSingleSchema ? undefined : value.id
-		const schema = this.isSingleSchema ? this.schema : this.schema[schemaKey]
+		const id = !this._schemaAttribute ? undefined : value.id
+		const schema = !this._schemaAttribute ? this.schema : this.schema[schemaKey]
 		return unvisit(id || value, schema)
 	}
 }
@@ -390,7 +390,7 @@ export const denormalize = (input, schema, entities) => {
 			if (typeof entity !== 'object' || entity === null) {
 				return entity
 			}
-		
+
 			if (!cache[schema.key]) {
 				cache[schema.key] = {}
 			}
@@ -398,13 +398,13 @@ export const denormalize = (input, schema, entities) => {
 			if (!cache[schema.key][id]) {
 				// Ensure we don't mutate it non-immutable objects
 				const entityCopy = { ...entity }
-		
+
 				// Need to set this first so that if it is referenced further within the
 				// denormalization the reference will already exist.
 				cache[schema.key][id] = entityCopy
 				cache[schema.key][id] = schema.denormalize(entityCopy, unvisit)
 			}
-		
+
 			return cache[schema.key][id]
 		}
 
