@@ -1,5 +1,5 @@
 // eslint-env jest
-import { compileSchema, normalize, schema } from '../'
+import { normalize, schema } from '../'
 
 describe('normalize', () => {
 	;[42, null, undefined, '42', () => {}].forEach((input) => {
@@ -94,58 +94,6 @@ describe('normalize', () => {
 		expect(normalize([null], [myEntity])).toMatchSnapshot()
 		expect(normalize([undefined], [myEntity])).toMatchSnapshot()
 		expect(normalize([false], [myEntity])).toMatchSnapshot()
-	})
-
-	// TODO: remove? basically it tests that a user can break encapsulation. why whould we allow this?!
-	test('can use fully custom entity classes', () => {
-		class MyEntity extends schema.Entity {
-			schema = {
-				children: compileSchema([new schema.Entity('children')]),
-			}
-
-			getId(entity, parent, key) {
-				return entity.uuid
-			}
-
-			normalize(input, parent, key, entities, visitedEntities) {
-				const entity = { ...input }
-				Object.keys(this.schema).forEach((key) => {
-					const schema = this.schema[key]
-					entity[key] = schema.normalize(input[key], input, key, entities, visitedEntities)
-				})
-				// TODO: inherit this part from `EntitySchema.normalize`?
-				const entityType = this.key
-				const id = this.getId(entity)
-				if (entityType in entities === false) {
-					entities[entityType] = {}
-				}
-				const entitiesOfKind = entities[entityType]
-			
-				const existingEntity = entitiesOfKind[id]
-				if (existingEntity) {
-					entitiesOfKind[id] = this._mergeStrategy(existingEntity, entity)
-				} else {
-					entitiesOfKind[id] = entity
-				}
-
-				return {
-					uuid: id,
-					schema: entityType,
-				}
-			}
-		}
-
-		const mySchema = new MyEntity('food')
-		expect(
-			normalize(
-				{
-					uuid: '1234',
-					name: 'tacos',
-					children: [{ id: 4, name: 'lettuce' }],
-				},
-				mySchema
-			)
-		).toMatchSnapshot()
 	})
 
 	test('uses the non-normalized input when getting the ID for an entity', () => {

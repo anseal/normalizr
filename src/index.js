@@ -1,5 +1,4 @@
-// export only for that bad test
-export const compileSchema = (schema) => {
+const compileSchema = (schema) => {
 	// TODO: looks like monkey-patching
 	if (typeof schema === 'object' && (!schema.normalize || typeof schema.normalize !== 'function')) {
 		if( Array.isArray(schema) ) {
