@@ -62,78 +62,78 @@ describe('denormalize', () => {
 		expect(denormalize('123', article, entities)).toMatchSnapshot()
 	})
 
-	// test('set to undefined if schema key is not in entities', () => {
-	// 	const user = new schema.Entity('users')
-	// 	const comment = new schema.Entity('comments', {
-	// 		user: user,
-	// 	})
-	// 	const article = new schema.Entity('articles', {
-	// 		author: user,
-	// 		comments: [comment],
-	// 	})
+	test('set to undefined if schema key is not in entities', () => {
+		const user = new schema.Entity('users')
+		const comment = new schema.Entity('comments', {
+			user: user,
+		})
+		const article = new schema.Entity('articles', {
+			author: user,
+			comments: [comment],
+		})
 
-	// 	const entities = {
-	// 		articles: {
-	// 			123: {
-	// 				id: '123',
-	// 				author: '8472',
-	// 				comments: ['1'],
-	// 			},
-	// 		},
-	// 		comments: {
-	// 			1: {
-	// 				user: '123',
-	// 			},
-	// 		},
-	// 	}
-	// 	expect(denormalize('123', article, entities)).toMatchSnapshot()
-	// })
+		const entities = {
+			articles: {
+				123: {
+					id: '123',
+					author: '8472',
+					comments: ['1'],
+				},
+			},
+			comments: {
+				1: {
+					user: '123',
+				},
+			},
+		}
+		expect(denormalize('123', article, entities)).toMatchSnapshot()
+	})
 
-	// test('does not modify the original entities', () => {
-	// 	const user = new schema.Entity('users')
-	// 	const article = new schema.Entity('articles', { author: user })
-	// 	const entities = Object.freeze({
-	// 		articles: Object.freeze({
-	// 			123: Object.freeze({
-	// 				id: '123',
-	// 				title: 'A Great Article',
-	// 				author: '8472',
-	// 			}),
-	// 		}),
-	// 		users: Object.freeze({
-	// 			8472: Object.freeze({
-	// 				id: '8472',
-	// 				name: 'Paul',
-	// 			}),
-	// 		}),
-	// 	})
-	// 	expect(() => denormalize('123', article, entities)).not.toThrow()
-	// })
+	test('does not modify the original entities', () => {
+		const user = new schema.Entity('users')
+		const article = new schema.Entity('articles', { author: user })
+		const entities = Object.freeze({
+			articles: Object.freeze({
+				123: Object.freeze({
+					id: '123',
+					title: 'A Great Article',
+					author: '8472',
+				}),
+			}),
+			users: Object.freeze({
+				8472: Object.freeze({
+					id: '8472',
+					name: 'Paul',
+				}),
+			}),
+		})
+		expect(() => denormalize('123', article, entities)).not.toThrow()
+	})
 
-	// test('denormalizes with function as idAttribute', () => {
-	// 	const normalizedData = {
-	// 		entities: {
-	// 			patrons: {
-	// 				1: { id: '1', guest: null, name: 'Esther' },
-	// 				2: { id: '2', guest: 'guest-2-1', name: 'Tom' },
-	// 			},
-	// 			guests: { 'guest-2-1': { guest_id: 1 } },
-	// 		},
-	// 		result: ['1', '2'],
-	// 	}
+	test('denormalizes with function as idAttribute', () => {
+		const normalizedData = {
+			entities: {
+				patrons: {
+					1: { id: '1', guest: null, name: 'Esther' },
+					2: { id: '2', guest: 'guest-2-1', name: 'Tom' },
+				},
+				guests: { 'guest-2-1': { guest_id: 1 } },
+			},
+			result: ['1', '2'],
+		}
 
-	// 	const guestSchema = new schema.Entity(
-	// 		'guests',
-	// 		{},
-	// 		{
-	// 			idAttribute: (value, parent, key) => `${key}-${parent.id}-${value.guest_id}`,
-	// 		}
-	// 	)
+		const guestSchema = new schema.Entity(
+			'guests',
+			{},
+			{
+				idAttribute: (value, parent, key) => `${key}-${parent.id}-${value.guest_id}`,
+			}
+		)
 
-	// 	const patronsSchema = new schema.Entity('patrons', {
-	// 		guest: guestSchema,
-	// 	})
+		const patronsSchema = new schema.Entity('patrons', {
+			guest: guestSchema,
+		})
 
-	// 	expect(denormalize(normalizedData.result, [patronsSchema], normalizedData.entities)).toMatchSnapshot()
-	// })
+		expect(denormalize(normalizedData.result, [patronsSchema], normalizedData.entities)).toMatchSnapshot()
+	})
 })
