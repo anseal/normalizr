@@ -1,4 +1,4 @@
-import { normalize, schema } from './index.js'
+import { normalize, overrideDefaultsDuringMigration, schema } from './index.js'
 
 const randomInRange = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min
 const repeat = (cnt, fn) => {
@@ -56,8 +56,10 @@ const originalData = {
 
 const test = () => {
 	console.log('!!!!!!!!!!!!!!')
+	// const article_ = article
+	const article_ = overrideDefaultsDuringMigration(article)
 	const start = performance.now()
-	const normalizedData = normalize(originalData, article)
+	const normalizedData = normalize(originalData, article_)
 	const duration = performance.now() - start
 	console.log(
 		duration

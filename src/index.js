@@ -14,13 +14,71 @@ const compileSchema = (schema) => {
 	return schema
 }
 
-const noMerge = (entityA, _entityB) => entityA
-const simpleMerge = (entityA, entityB) => Object.assign(entityA, entityB)
-const defaultMerge = noMerge
-// const defaultMerge = simpleMerge
+const originalIdAttribute = 'id'
+const defaultIdAttribute = originalIdAttribute
 
-// let cnt1 = 0;
-// let cnt2 = 0;
+const noMergeStrategy = (entityA, _entityB) => entityA
+// TODO: replace `originalMergeStrategy` with `simpleMergeStrategy`
+const simpleMergeStrategy = (entityA, entityB) => Object.assign(entityA, entityB)
+const originalMergeStrategy = (entityA, entityB) => ({ ...entityA, ...entityB })
+const defaultMergeStrategy = originalMergeStrategy
+// const defaultMergeStrategy = noMergeStrategy
+
+const inplaceProcessStrategy = (input) => input
+const originalProcessStrategy = (input) => ({ ...input }) // TODO: while using this strategy try not to copy, at least before merge/return?
+const defaultProcessStrategy = originalProcessStrategy
+// const defaultProcessStrategy = inplaceProcessStrategy
+
+const originalFallbackStrategy = (_key, _schema) => undefined
+const defaultFallbackStrategy = originalFallbackStrategy
+
+export const overrideDefaultsDuringMigration = (schema, defaults) => {
+	defaults = {
+		idAttribute: defaultIdAttribute,
+		mergeStrategy: noMergeStrategy,
+		processStrategy: inplaceProcessStrategy,
+		fallbackStrategy: originalFallbackStrategy,
+		...defaults
+	}
+	return _overrideDefaultsDuringMigration(schema, defaults, new Map())
+}
+
+const _overrideDefaultsDuringMigration = (schema, defaults, visitedSchemaElements) => {
+	if( visitedSchemaElements.has(schema) ) { return visitedSchemaElements.get(schema) }
+	const newSchema = Object.create(Object.getPrototypeOf(schema))
+	Object.assign(newSchema, schema)
+	visitedSchemaElements.set(schema, newSchema)
+
+	if(
+		schema instanceof ArraySchema ||
+		schema instanceof UnionSchema ||
+		schema instanceof ValuesSchema
+	) {
+		newSchema.schema = _overrideDefaultsDuringMigration(schema.schema, defaults, visitedSchemaElements)
+	} else if( schema instanceof ObjectSchema ) {
+		for(const key in schema.schema) {
+			newSchema.schema[key] = _overrideDefaultsDuringMigration(schema.schema[key], defaults, visitedSchemaElements)
+		}
+	} else if( schema instanceof EntitySchema ) {
+		const override = (prop, defaultValue) => {
+			if( schema[`_${prop}`] === defaultValue ) {
+				newSchema[`_${prop}`] = defaults[prop]
+			} else {
+				newSchema[`_${prop}`] = schema[`_${prop}`]
+			}
+		}
+		override('idAttribute', defaultIdAttribute)
+		override('mergeStrategy', defaultMergeStrategy)
+		override('processStrategy', defaultProcessStrategy)
+		override('fallbackStrategy', defaultFallbackStrategy)
+		for(const key in schema.schema) {
+			newSchema.schema[key] = _overrideDefaultsDuringMigration(schema.schema[key], defaults, visitedSchemaElements)
+		}
+	} else {
+		throw new Error('Uexpected schema element')
+	}
+	return newSchema
+}
 
 class EntitySchema {
 	constructor(key, definition = {}, options = {}) {
@@ -29,12 +87,10 @@ class EntitySchema {
 		}
 
 		const {
-			idAttribute = 'id',
-			mergeStrategy = defaultMerge, // TODO: or even `retrun entityA` as a default
-			// mergeStrategy = (entityA, entityB) => ({ ...entityA, ...entityB }),
-			processStrategy = (input) => ({ ...input }), // TODO: don't copy, at least before merge/return?
-			// processStrategy = (input) => input, // TODO: don't copy, at least before merge/return?
-			fallbackStrategy = (_key, _schema) => undefined,
+			idAttribute = defaultIdAttribute,
+			mergeStrategy = defaultMergeStrategy,
+			processStrategy = defaultProcessStrategy,
+			fallbackStrategy = defaultFallbackStrategy,
 		} = options
 
 		this._key = key
@@ -71,8 +127,7 @@ class EntitySchema {
 		const id = this._getId(input, parent, key) // TODO: what if id === `undefined`?
 		const entityType = this._key
 
-		// TODO: check the presence first
-		// then check if there would be any merge or it just `identity()` function
+		// check the presence first, then check if there would be any merge or it just `identity()` function
 		// and in the latter case skip normalization entirely
 		// TODO: preallocate all `entityType`s?
 		if (entityType in entities === false) {
@@ -81,12 +136,11 @@ class EntitySchema {
 		const entitiesOfKind = entities[entityType]
 	
 		const existingEntity = entitiesOfKind[id]
-		if (existingEntity && this._mergeStrategy === noMerge ) {
-			// cnt1++
+		if (existingEntity && this._mergeStrategy === noMergeStrategy ) {
 			return id
 		}
-		// cnt2++
 
+		// TODO: does `existingEntity === undefined` means that `visited() === false`?
 		if(visited(input, entityType, id)) { return id }
 
 		// TODO: default Strategy - copy over existingEntity ?
@@ -276,6 +330,9 @@ class ArraySchema extends PolymorphicSchema {
 			return input
 		}
 		// TODO: what is it for? maybe change API and remove?
+		// from docs: "If the input value is an Object instead of an Array, the normalized result will be an Array of the Object's values."
+		// disagree on this - just make this explicit in a schema
+		// ...but the output will be an Object then, not an Array... so it needs to be customizable
 		if( Array.isArray(input) === false ) {
 			input = Object.keys(input).map((key) => input[key]) // TODO: Object.values()
 		}
