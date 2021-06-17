@@ -163,15 +163,10 @@ class ObjectSchema {
 	}
 
 	denormalize(input, unvisit) {
-		return ObjectUtils.denormalize(this.schema, input, unvisit)
-	}
-}
-const ObjectUtils = {
-	denormalize: (schema, input, unvisit) => {
 		const object = { ...input }
-		Object.keys(schema).forEach((key) => {
+		Object.keys(this.schema).forEach((key) => {
 			if (object[key] != null) {
-				object[key] = unvisit(object[key], schema[key])
+				object[key] = unvisit(object[key], this.schema[key])
 			}
 		})
 		return object
