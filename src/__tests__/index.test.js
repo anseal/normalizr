@@ -98,7 +98,14 @@ describe('normalize', () => {
 
 	test('uses the non-normalized input when getting the ID for an entity', () => {
 		const userEntity = new schema.Entity('users')
-		const idAttributeFn = jest.fn((nonNormalized, parent, key) => nonNormalized.user.id)
+		// jest.fn() won't work if I choose to use `inplaceProcessStrategy`
+		// TODO: maybe return jest.fn() and add explicit `shallowCopyProcessStrategy`
+		const idAttributeFnArgsSnapshot = []
+		const idAttributeFn = ((...args) => {
+			const [nonNormalized] = args
+			idAttributeFnArgsSnapshot.push(JSON.stringify(args))
+			return nonNormalized.user.id
+		})
 		const recommendation = new schema.Entity(
 			'recommendations',
 			{ user: userEntity },
@@ -107,7 +114,7 @@ describe('normalize', () => {
 			}
 		)
 		expect(normalize({ user: { id: '456' } }, recommendation)).toMatchSnapshot()
-		expect(idAttributeFn.mock.calls).toMatchSnapshot()
+		expect(idAttributeFnArgsSnapshot).toMatchSnapshot()
 		expect(recommendation.idAttribute).toBe(idAttributeFn)
 	})
 

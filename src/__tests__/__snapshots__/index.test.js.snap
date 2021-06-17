@@ -176,18 +176,6 @@ Object {
 
 exports[`normalize uses the non-normalized input when getting the ID for an entity 2`] = `
 Array [
-  Array [
-    Object {
-      "user": Object {
-        "id": "456",
-      },
-    },
-    Object {
-      "user": Object {
-        "id": "456",
-      },
-    },
-    null,
-  ],
+  "[{\\"user\\":{\\"id\\":\\"456\\"}},{\\"user\\":{\\"id\\":\\"456\\"}},null]",
 ]
 `;
