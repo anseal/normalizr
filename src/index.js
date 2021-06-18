@@ -246,11 +246,27 @@ class PolymorphicSchema {
 		if (schemaAttribute) {
 			this._schemaAttribute = typeof schemaAttribute === 'string' ? (input) => input[schemaAttribute] : schemaAttribute
 			this._normalizeValue = this._normalizeValue2
-			for(const key in definition) { definition[key] = compileSchema(definition[key]) }
+			if(
+				definition instanceof EntitySchema === false &&
+				definition instanceof ArraySchema === false &&
+				definition instanceof ObjectSchema === false &&
+				definition instanceof ValuesSchema === false &&
+				definition instanceof UnionSchema === false
+			) {
+				if( Array.isArray(definition) ) { // TODO: is it possible?
+					this.define(compileSchema(definition))
+				} else {
+					let compiledDefinition = {}
+					for(const key in definition) { compiledDefinition[key] = compileSchema(definition[key]) }
+					this.define(compiledDefinition)
+				}
+			} else {
+				this.define(definition)
+			}
 		} else {
 			this._normalizeValue = this._normalizeValue1
+			this.define(definition)
 		}
-		this.define(definition)
 	}
 
 	define(definition) {
