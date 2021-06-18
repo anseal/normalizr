@@ -26,7 +26,6 @@
 	],
 	"main": "src/index.js",
 	"typings": "index.d.ts",
-	"type": "module",
 	"sideEffects": false,
 	"scripts": {
 		"PF": "node /home/nemo/Documents/work/YASS/index.js",
