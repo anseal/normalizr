@@ -116,8 +116,9 @@ class EntitySchema {
 	define(definition) {
 		// TODO: check if `definition` is an object?
 		// TODO: check if it's a plain object, so that it's safe to iterate over schema without `hasOwnProperty`
-		for(const key in definition) { definition[key] = compileSchema(definition[key]) }
-		this.schema = Object.assign(this.schema || {}, definition);
+		const compiledDefinition = {}
+		for(const key in definition) { compiledDefinition[key] = compileSchema(definition[key]) }
+		this.schema = Object.assign(this.schema || {}, compiledDefinition);
 	}
 
 	normalize(input, parent, key, entities, visited) {
