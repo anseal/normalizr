@@ -2,16 +2,39 @@ const compileSchema = (schema) => {
 	// TODO: looks like monkey-patching
 	if (typeof schema === 'object' && (!schema.normalize || typeof schema.normalize !== 'function')) {
 		if( Array.isArray(schema) ) {
-			// TODO: schema.length === 0 ?
-			if (schema.length > 1) {
-				throw new Error(`Expected schema definition to be a single schema, but found ${schema.length}.`)
-			}
-			schema = new ArraySchema(schema[0], undefined, false)
+			return compileArraySchema(schema)
 		} else {
-			schema = new ObjectSchema(schema)
+			return new ObjectSchema(schema)
 		}
 	}
 	return schema
+}
+
+const compileArraySchema = (schema) => {
+	// TODO: schema.length === 0 ?
+	if (schema.length > 1) {
+		throw new Error(`Expected schema definition to be a single schema, but found ${schema.length}.`)
+	}
+	return new ArraySchema(schema[0], undefined, false)
+}
+const mapPlainObject = (obj, fn) => {
+	const newObj = {}
+	for(const key in obj) {
+		newObj[key] = fn(obj[key])
+	}
+	return newObj
+}
+const filterPlainObject = (obj, fn) => {
+	const newObj = {}
+	for(const key in obj) {
+		if( fn(obj[key]) ) {
+			newObj[key] = obj[key]
+		}
+	}
+	return newObj
+}
+const compilePlainObjectMapping = (definition) => {
+	return mapPlainObject(definition, compileSchema)
 }
 
 const originalIdAttribute = 'id'
@@ -116,9 +139,7 @@ class EntitySchema {
 	define(definition) {
 		// TODO: check if `definition` is an object?
 		// TODO: check if it's a plain object, so that it's safe to iterate over schema without `hasOwnProperty`
-		const compiledDefinition = {}
-		for(const key in definition) { compiledDefinition[key] = compileSchema(definition[key]) }
-		this.schema = Object.assign(this.schema || {}, compiledDefinition);
+		this.schema = Object.assign(this.schema || {}, compilePlainObjectMapping(definition));
 	}
 
 	normalize(input, parent, key, entities, visited) {
@@ -196,11 +217,11 @@ class ObjectSchema {
 	}
 
 	// TODO: DRY with EntitySchema.define?
-	// TODO: now there is a difference, should we compile children schemas and should there be more tests?
+	// TODO: stale comment: // TODO: now there is a difference, should we compile children schemas and should there be more tests?
 	define(definition) {
 		// TODO: check if `definition` is an object?
 		// TODO: check if it's a plain object, so that it's safe to iterate over schema without `hasOwnProperty`
-		this.schema = Object.assign(this.schema || {}, definition);
+		this.schema = Object.assign(this.schema || {}, compilePlainObjectMapping(definition));
 	}
 
 	normalize(input, parent, key, entities, visited) {
