@@ -248,31 +248,32 @@ class PolymorphicSchema {
 		if (schemaAttribute) {
 			this._schemaAttribute = typeof schemaAttribute === 'string' ? (input) => input[schemaAttribute] : schemaAttribute
 			this._normalizeValue = this._normalizeValue2
-			if(
-				definition instanceof EntitySchema === false &&
-				definition instanceof ArraySchema === false &&
-				definition instanceof ObjectSchema === false &&
-				definition instanceof ValuesSchema === false &&
-				definition instanceof UnionSchema === false
-			) {
-				if( Array.isArray(definition) ) { // TODO: is it possible?
-					this.define(compileSchema(definition))
-				} else {
-					let compiledDefinition = {}
-					for(const key in definition) { compiledDefinition[key] = compileSchema(definition[key]) }
-					this.define(compiledDefinition)
-				}
-			} else {
-				this.define(definition)
-			}
 		} else {
 			this._normalizeValue = this._normalizeValue1
-			this.define(definition)
 		}
+		this.define(definition)
 	}
 
 	define(definition) {
-		this.schema = definition
+		if( this._schemaAttribute !== undefined ) {
+			if(
+				definition instanceof EntitySchema ||
+				definition instanceof ArraySchema ||
+				definition instanceof ObjectSchema ||
+				definition instanceof ValuesSchema ||
+				definition instanceof UnionSchema
+			) {
+				this.schema = definition
+			} else {
+				if( Array.isArray(definition) ) {
+					this.schema = compileArraySchema(definition)
+				} else {
+					this.schema = compilePlainObjectMapping(definition)
+				}
+			}
+		} else {
+			this.schema = compileSchema(definition)
+		}
 	}
 
 	_normalizeValue1(value, parent, key, entities, visited) {
