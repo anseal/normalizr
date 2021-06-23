@@ -244,6 +244,7 @@ class ObjectSchema {
 
 class PolymorphicSchema {
 	constructor(definition, schemaAttribute) {
+		this._schemaAttribute = undefined
 		if (schemaAttribute) {
 			this._schemaAttribute = typeof schemaAttribute === 'string' ? (input) => input[schemaAttribute] : schemaAttribute
 			this._normalizeValue = this._normalizeValue2
