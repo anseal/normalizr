@@ -37,6 +37,8 @@ const compilePlainObjectMapping = (definition) => {
 	return mapPlainObject(definition, compileSchema)
 }
 
+let maxId = 0
+
 const originalIdAttribute = 'id'
 const defaultIdAttribute = originalIdAttribute
 
@@ -83,6 +85,7 @@ const _overrideDefaultsDuringMigration = (schema, defaults, visitedSchemaElement
 			newSchema.schema[key] = _overrideDefaultsDuringMigration(schema.schema[key], defaults, visitedSchemaElements)
 		}
 	} else if( schema instanceof EntitySchema ) {
+		newSchema.__id = newSchema.__id + "*" // TODO: for debugging purposes. remove?
 		const override = (prop, defaultValue) => {
 			if( schema[`_${prop}`] === defaultValue ) {
 				newSchema[`_${prop}`] = defaults[prop]
@@ -105,6 +108,7 @@ const _overrideDefaultsDuringMigration = (schema, defaults, visitedSchemaElement
 
 class EntitySchema {
 	constructor(key, definition = {}, options = {}) {
+		this.__id = maxId++ // TODO: for debugging purposes. remove?
 		if (!key || typeof key !== 'string') {
 			throw new Error(`Expected a string key for Entity, but found ${key}.`)
 		}
