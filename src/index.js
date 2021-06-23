@@ -34,7 +34,15 @@ const filterPlainObject = (obj, fn) => {
 	return newObj
 }
 const compilePlainObjectMapping = (definition) => {
-	return mapPlainObject(definition, compileSchema)
+	const compiledDefinition = mapPlainObject(definition, compileSchema)
+	// TODO: I consider this to be a client error, but for backward compatibility let it be for now. remove!
+	return filterPlainObject(compiledDefinition, schema => {
+		if( !schema ) {
+			console.warn("Nil schemas are depricated.")
+			return false
+		}
+		return true
+	})
 }
 
 let maxId = 0
@@ -69,6 +77,11 @@ export const overrideDefaultsDuringMigration = (schema, defaults) => {
 }
 
 const _overrideDefaultsDuringMigration = (schema, defaults, visitedSchemaElements) => {
+	// TODO: I consider this to be a client error, but for backward compatibility let it be for now. remove!
+	if( !schema ) {
+		console.warn("Nil schemas are depricated.")
+		return schema
+	}
 	if( visitedSchemaElements.has(schema) ) { return visitedSchemaElements.get(schema) }
 	const newSchema = Object.create(Object.getPrototypeOf(schema))
 	Object.assign(newSchema, schema)
@@ -179,13 +192,19 @@ class EntitySchema {
 			// 2) if `hasOwnProperty(key) === false`, and the key is in the `schema` it surely looks like an error
 			//    or... we just hsouldn't care - user can define similar attributes with the help of `prototype`
 			//    and I see no reason not to let him do this
-			// 3) but if the key is not in the `schema` them we just won't get here because we iterate over `schema`'s keys,
+			// 3) but if the key is not in the `schema` then we just won't get here because we iterate over `schema`'s keys,
 			//    not over `processedEntity`'s keys
-			// but the 2 point changes the API in rare but possible cases, so the removal of this if is a breaking change
+			// but the point 2 changes the API in rare but possible cases, so the removal of this if is a breaking change
 			// if (typeof processedEntity[key] === 'object' && processedEntity.hasOwnProperty(key)) { // TODO: switch places
 			// if (processedEntity.hasOwnProperty(key) && typeof processedEntity[key] === 'object') { // TODO: switch places
 				const schema = this.schema[key]
 				const resolvedSchema = typeof schema === 'function' ? schema(input) : schema // TODO: function instead of if?
+				// TODO: I consider this to be a client error, but for backward compatibility let it be for now. remove!
+				if( !resolvedSchema ) {
+					// console output here is really bad, left it for debuging
+					// console.warn("Nil schemas are depricated.", this.schema, key)
+					continue
+				}
 				processedEntity[key] = resolvedSchema.normalize(
 					processedEntity[key],
 					processedEntity,
