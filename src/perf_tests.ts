@@ -1,8 +1,8 @@
-import { normalize, overrideDefaultsDuringMigration, schema } from '../dist/index.js'
-import {performance} from 'perf_hooks'
+import { normalize, overrideDefaultsDuringMigration, schema } from './index.js'
+import { performance } from 'perf_hooks'
 
-const randomInRange = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min
-const repeat = (cnt, fn) => {
+const randomInRange = (min: number, max: number) => Math.floor(Math.random() * (max - min + 1)) + min
+const repeat = (cnt: number, fn: (i: number) => any) => {
 	const results = []
 	for (let i = 0; i !== cnt; ++i) {
 		results[i] = fn(i)
