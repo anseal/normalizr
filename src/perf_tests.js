@@ -1,4 +1,5 @@
-import { normalize, overrideDefaultsDuringMigration, schema } from './index.js'
+import { normalize, overrideDefaultsDuringMigration, schema } from '../dist/index.js'
+import {performance} from 'perf_hooks'
 
 const randomInRange = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min
 const repeat = (cnt, fn) => {
@@ -66,5 +67,10 @@ const test = () => {
 		// JSON.stringify(normalizedData,undefined,'\t')
 	)
 }
-document.getElementById('run').addEventListener('click', test)
+test()
+test()
+test()
+test()
+test()
+// document.getElementById('run').addEventListener('click', test)
 //*/
