@@ -118,7 +118,7 @@ const defaultProcessStrategy = originalProcessStrategy
 const originalFallbackStrategy = (_key: Key, _schema: Schema) => undefined
 const defaultFallbackStrategy = originalFallbackStrategy
 
-export const overrideDefaultsDuringMigration = (schema: DepricatedSchema, defaults: EntityOptions) => {
+export const overrideDefaultsDuringMigration = (schema: DepricatedSchema, defaults: EntityOptions = {}) => {
 	defaults = {
 		idAttribute: defaultIdAttribute,
 		mergeStrategy: noMergeStrategy,

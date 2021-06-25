@@ -19,16 +19,26 @@
 		"json"
 	],
 	"files": [
-		"src/index.js",
+		"dist/cjs/index.js",
+		"dist/esm/index.js",
 		"index.d.ts",
 		"LICENSE",
 		"README.md"
 	],
-	"main": "src/index.js",
+	"main": "dist/cjs/index.js",
+	"module": "dist/esm/index.js",
 	"typings": "index.d.ts",
+	"export": {
+		".": {
+			"require": "./dist/cjs/index.js",
+			"import": "./dist/esm/index.js"
+		}
+	},
 	"sideEffects": false,
 	"scripts": {
-		"PF": "node /home/nemo/Documents/work/YASS/index.js",
+		"perf_tests_node": "npm run build && node ./dist/esm/perf_node.js",
+		"perf_tests_browser": "npm run build && serve .",
+		"build": "tsc -p tsconfig-esm.json & tsc -p tsconfig-cjs.json && echo '{\"type\": \"module\"}' > dist/esm/package.json && echo '{\"type\": \"commonjs\"}' > dist/cjs/package.json",
 		"test": "jest",
 		"test:coverage": "npm run test -- --coverage"
 	},
@@ -51,6 +61,7 @@
 		"jest": "^27.0.5",
 		"lint-staged": "^8.1.7",
 		"prettier": "^2.1.2",
+		"serve": "^12.0.0",
 		"ts-jest": "^27.0.3",
 		"ts-node": "^10.0.0",
 		"typescript": "^4.3.4"

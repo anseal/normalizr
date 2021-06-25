@@ -1,5 +1,4 @@
 import { normalize, overrideDefaultsDuringMigration, schema } from './index.js'
-import { performance } from 'perf_hooks'
 
 const randomInRange = (min: number, max: number) => Math.floor(Math.random() * (max - min + 1)) + min
 const repeat = (cnt: number, fn: (i: number) => any) => {
@@ -55,22 +54,13 @@ const originalData = {
 	}),
 }
 
-const test = () => {
-	console.log('!!!!!!!!!!!!!!')
-	// const article_ = article
-	const article_ = overrideDefaultsDuringMigration(article)
+// const article_ = article
+const article_ = overrideDefaultsDuringMigration(article)
+
+export const test = (performance: { now: () => number }) => {
 	const start = performance.now()
 	const normalizedData = normalize(originalData, article_)
 	const duration = performance.now() - start
-	console.log(
-		duration
-		// JSON.stringify(normalizedData,undefined,'\t')
-	)
+	console.log(duration)
+	console.log(Object.keys(normalizedData).length)
 }
-test()
-test()
-test()
-test()
-test()
-// document.getElementById('run').addEventListener('click', test)
-//*/
