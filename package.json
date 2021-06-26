@@ -1,6 +1,6 @@
 {
 	"name": "normalizr-ex",
-	"version": "1.0.0",
+	"version": "1.0.1",
 	"description": "Normalizes and denormalizes JSON according to schema for Redux and Flux applications",
 	"bugs": {
 		"url": "https://github.com/anseal/normalizr/issues"
@@ -20,7 +20,9 @@
 	],
 	"files": [
 		"dist/cjs/index.js",
+		"dist/cjs/package.json",
 		"dist/esm/index.js",
+		"dist/esm/package.json",
 		"index.d.ts",
 		"LICENSE",
 		"README.md"
