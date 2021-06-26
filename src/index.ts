@@ -39,9 +39,10 @@ export interface EntityOptions {
 	fallbackStrategy?: FallbackFunction
 }
 
-const compileSchema = (schema: Schema) => {
+const compileSchema = (schema: Schema): CompiledSchema => {
 	if( schema === undefined || schema === null ) {
 		console.warn("Nil schemas are depricated.")
+		// @ts-ignore // TODO: remove? some TS versions (4.2.4?) do not understand that `schema` is actually `never` in here
 		return schema
 	}
 	// TODO: looks like monkey-patching
