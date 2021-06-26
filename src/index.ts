@@ -41,7 +41,8 @@ export interface EntityOptions {
 
 const compileSchema = (schema: Schema) => {
 	if( schema === undefined || schema === null ) {
-		throw new Error("Nil schemas are depricated.")
+		console.warn("Nil schemas are depricated.")
+		return schema
 	}
 	// TODO: looks like monkey-patching
 	if (
@@ -556,12 +557,14 @@ export const normalize = (input: Input, schema: Schema, circularDependencies = f
 			}".`
 		)
 	}
+	if( schema === undefined || schema === null ) {
+		throw new Error("Nil schemas are depricated.")
+	}
 
 	const entities = {}
 	const visitedEntities: Record<Key,Record<Key,Set<Input>>> = {}
 
 	const visited = circularDependencies ? (input: Input, entityType: Key, id: Key) => {
-		//*
 		if (!(entityType in visitedEntities)) {
 			visitedEntities[entityType] = {}
 		}
@@ -580,6 +583,9 @@ export const normalize = (input: Input, schema: Schema, circularDependencies = f
 }
 
 export const denormalize = (input: Input, schema: Schema, entities: Entities) => {
+	if( schema === undefined || schema === null ) {
+		throw new Error("Nil schemas are depricated.")
+	}
 	if( input === undefined ) { return undefined }
 
 	const cache: Record<Key,Record<Key, Input>> = {}
