@@ -4,6 +4,7 @@ exports.denormalize = exports.normalize = exports.schema = exports.overrideDefau
 const compileSchema = (schema) => {
     if (schema === undefined || schema === null) {
         console.warn("Nil schemas are depricated.");
+        // @ts-ignore // TODO: remove? some TS versions (4.2.4?) do not understand that `schema` is actually `never` in here
         return schema;
     }
     // TODO: looks like monkey-patching
@@ -72,7 +73,7 @@ const defaultProcessStrategy = originalProcessStrategy;
 // const defaultProcessStrategy = inplaceProcessStrategy
 const originalFallbackStrategy = (_key, _schema) => undefined;
 const defaultFallbackStrategy = originalFallbackStrategy;
-exports.overrideDefaultsDuringMigration = (schema, defaults = {}) => {
+const overrideDefaultsDuringMigration = (schema, defaults = {}) => {
     defaults = Object.assign({ idAttribute: defaultIdAttribute, mergeStrategy: noMergeStrategy, processStrategy: inplaceProcessStrategy, fallbackStrategy: originalFallbackStrategy }, defaults);
     // TODO: I consider this to be a client error, but for backward compatibility let it be for now. remove!
     if (!schema) {
@@ -80,6 +81,7 @@ exports.overrideDefaultsDuringMigration = (schema, defaults = {}) => {
     }
     return _overrideDefaultsDuringMigration(compileSchema(schema), defaults, new Map());
 };
+exports.overrideDefaultsDuringMigration = overrideDefaultsDuringMigration;
 const _overrideDefaultsDuringMigration = (schema, defaults, visitedSchemaElements) => {
     if (!schema) {
         console.warn("Nil schemas are depricated.");
@@ -217,7 +219,15 @@ class EntitySchema {
                 // console.warn("Nil schemas are depricated.", this.schema, key)
                 continue;
             }
-            processedEntity[key] = resolvedSchema.normalize(processedEntity[key], processedEntity, key, entities, visited);
+            const value = resolvedSchema.normalize(processedEntity[key], processedEntity, key, entities, visited);
+            // when there is a schema defined for some field, but there's no such field in the data - skip it
+            // TODO:
+            // 	1)	not sure if it's really necessary.
+            //		probably not necessary but good - saves memory, and there can be less checks when user iterates over the entity
+            // 	2)	and if it is - it'd be better to extract the check from inside of the `normalize()`
+            if (value !== undefined && value !== null) {
+                processedEntity[key] = value;
+            }
             // }
         }
         if (existingEntity) {
@@ -441,7 +451,7 @@ exports.schema = {
 // 	result: Result,
 // 	entities: Collections,
 // }
-exports.normalize = (input, schema, circularDependencies = false) => {
+const normalize = (input, schema, circularDependencies = false) => {
     // TODO: not sure why we should throw here but not deeper in the tree (there we just return value)
     if (typeof input !== 'object' || input === null) {
         throw new Error(`Unexpected input given to normalize. Expected type to be "object", found "${input === null ? 'null' : typeof input}".`);
@@ -467,7 +477,8 @@ exports.normalize = (input, schema, circularDependencies = false) => {
     const result = compileSchema(schema).normalize(input, input, null, entities, visited);
     return { entities, result };
 };
-exports.denormalize = (input, schema, entities) => {
+exports.normalize = normalize;
+const denormalize = (input, schema, entities) => {
     if (schema === undefined || schema === null) {
         throw new Error("Nil schemas are depricated.");
     }
@@ -512,4 +523,5 @@ exports.denormalize = (input, schema, entities) => {
     }
     return unvisit(input, compileSchema(schema));
 };
+exports.denormalize = denormalize;
 //# sourceMappingURL=index.js.map

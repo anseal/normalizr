@@ -1,6 +1,7 @@
 const compileSchema = (schema) => {
     if (schema === undefined || schema === null) {
         console.warn("Nil schemas are depricated.");
+        // @ts-ignore // TODO: remove? some TS versions (4.2.4?) do not understand that `schema` is actually `never` in here
         return schema;
     }
     // TODO: looks like monkey-patching
@@ -214,7 +215,15 @@ class EntitySchema {
                 // console.warn("Nil schemas are depricated.", this.schema, key)
                 continue;
             }
-            processedEntity[key] = resolvedSchema.normalize(processedEntity[key], processedEntity, key, entities, visited);
+            const value = resolvedSchema.normalize(processedEntity[key], processedEntity, key, entities, visited);
+            // when there is a schema defined for some field, but there's no such field in the data - skip it
+            // TODO:
+            // 	1)	not sure if it's really necessary.
+            //		probably not necessary but good - saves memory, and there can be less checks when user iterates over the entity
+            // 	2)	and if it is - it'd be better to extract the check from inside of the `normalize()`
+            if (value !== undefined && value !== null) {
+                processedEntity[key] = value;
+            }
             // }
         }
         if (existingEntity) {
