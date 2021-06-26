@@ -374,7 +374,7 @@ class ObjectSchema {
 }
 
 class PolymorphicSchema {
-	_schemaAttribute: SchemaAttribute | undefined
+	_schemaAttribute: SchemaAttribute | undefined // TODO: | Key
 	_normalizeValue: NormalizeValue
 	schema: CompiledSchema | CompiledPlainObjectSchema = {}
 
@@ -541,6 +541,12 @@ export const schema = {
 	Values: ValuesSchema,
 }
 
+// TODO: something like:
+// type NormalizeResult<Result, Collections> = {
+// 	result: Result,
+// 	entities: Collections,
+// }
+
 export const normalize = (input: Input, schema: Schema, circularDependencies = false) => {
 	// TODO: not sure why we should throw here but not deeper in the tree (there we just return value)
 	if (typeof input !== 'object' || input === null) {
@@ -566,19 +572,6 @@ export const normalize = (input: Input, schema: Schema, circularDependencies = f
 			return true
 		}
 		visitedEntities[entityType][id].add(input)
-		// eslint-disable-next-line spaced-comment
-		/*/
-		if (!(entityType in visitedEntities)) {
-			visitedEntities[entityType] = {}
-		}
-		if (!(id in visitedEntities[entityType])) {
-			visitedEntities[entityType][id] = []
-		}
-		if (visitedEntities[entityType][id].some((entity) => entity === input)) {
-			return true
-		}
-		visitedEntities[entityType][id].push(input)
-		//*/
 		return false
 	} : () => false
 	
