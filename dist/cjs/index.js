@@ -219,14 +219,32 @@ class EntitySchema {
                 // console.warn("Nil schemas are depricated.", this.schema, key)
                 continue;
             }
-            const value = resolvedSchema.normalize(processedEntity[key], processedEntity, key, entities, visited);
             // when there is a schema defined for some field, but there's no such field in the data - skip it
             // TODO:
             // 	1)	not sure if it's really necessary.
             //		probably not necessary but good - saves memory, and there can be less checks when user iterates over the entity
             // 	2)	and if it is - it'd be better to extract the check from inside of the `normalize()`
-            if (value !== undefined && value !== null) {
-                processedEntity[key] = value;
+            // TODO: but actually originally there was the `typeof processedEntity[key] === 'object'` check for that
+            // that's not the same as this (e.g processedEntity[key] is a number)
+            // Also the point to think about: `undefined` - can be seen as the absence of data, but null - is the data - `no data`
+            // TODO: test these cases:
+            // 	-	no field, but there's schema
+            // 	-	atomic value, but there's schema, as if it should be an object
+            // 	-	separate cases for `null` and `undefined`
+            // const value = resolvedSchema.normalize(processedEntity[key], processedEntity, key, entities, visited)
+            // if( value !== undefined && value !== null ) {
+            // 	processedEntity[key] = value
+            // }
+            // when the result is nil - originally it's allowed... I'd say it should be forbidden
+            // we a replacing object with ids here, and id = null|undefined is strange to say the least
+            // if you really need something like this you can return 'undefined'|'null' - strings. ids would be strings in entities' keys anyway
+            // ok, so to skip nonexistent field we just need to check `typeof processedEntity[key] === 'object'`
+            // that also check that the field is not for exmaple an id already
+            // which is quite possible in case of inplace stratagies or just because the data was normalized already
+            // not a great idea (to pass data of different types, I mean), but for backward compatibility - ok, let it be
+            // but I'd add warnings for this
+            if (typeof processedEntity[key] === 'object') { // TODO: what about null?
+                processedEntity[key] = resolvedSchema.normalize(processedEntity[key], processedEntity, key, entities, visited);
             }
             // }
         }
