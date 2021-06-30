@@ -1,4 +1,5 @@
 import { normalize, overrideDefaultsDuringMigration, schema } from './index.js'
+import { cloneWithJSON, clonePOJO, deepEqualWithJSON, deepEqualSameShape } from './utils.js'
 
 const randomInRange = (min: number, max: number) => Math.floor(Math.random() * (max - min + 1)) + min
 const repeat = (cnt: number, fn: (i: number) => any) => {
@@ -58,6 +59,13 @@ const originalData = {
 const article_ = overrideDefaultsDuringMigration(article)
 
 export const test = (performance: { now: () => number }) => {
+	const data = clonePOJO(originalData)
+	const data2 = cloneWithJSON(originalData)
+	if( deepEqualWithJSON(data, data2) === false ) {
+		if( deepEqualSameShape(data, data2) ) throw new Error('even more unexpected 1')
+		throw new Error('unexpected')
+	}
+	if( deepEqualSameShape(data, data2) === false ) throw new Error('even more unexpected 2')
 	const start = performance.now()
 	const normalizedData = normalize(originalData, article_)
 	const duration = performance.now() - start
