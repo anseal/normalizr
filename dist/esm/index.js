@@ -1,3 +1,4 @@
+import { performance } from 'perf_hooks';
 const compileSchema = (schema) => {
     if (schema === undefined || schema === null) {
         console.warn("Nil schemas are depricated.");
@@ -192,7 +193,10 @@ class EntitySchema {
             return id;
         }
         // TODO: default Strategy - copy over existingEntity ?
+        const start = performance.now();
         const processedEntity = this._processStrategy(input, parent, keyInParent);
+        entitiesOfKind.__process_time = (entitiesOfKind.__process_time || 0) + performance.now() - start;
+        entitiesOfKind.__process_runs = (entitiesOfKind.__process_runs || 0) + 1;
         for (const key in this.schema) {
             // TODO: do we need this? all tests are passing
             // it looks like optimizations... but in reality perf is dropping
@@ -245,7 +249,10 @@ class EntitySchema {
             // }
         }
         if (existingEntity) {
+            const start = performance.now();
             entitiesOfKind[id] = this._mergeStrategy(existingEntity, processedEntity);
+            entitiesOfKind.__merge_time = (entitiesOfKind.__merge_time || 0) + performance.now() - start;
+            entitiesOfKind.__merge_runs = (entitiesOfKind.__merge_runs || 0) + 1;
         }
         else {
             entitiesOfKind[id] = processedEntity;
@@ -489,6 +496,17 @@ export const normalize = (input, schema, circularDependencies = false) => {
         return false;
     } : () => false;
     const result = compileSchema(schema).normalize(input, input, null, entities, visited);
+    const log = [];
+    log.push('entityType'.padStart(30) + 'process_runs'.padStart(13) + 'merge_runs'.padStart(13) + 'process_time'.padStart(25) + 'merge_time'.padStart(25));
+    for (const entityType in entities) {
+        const entitiesOfKind = entities[entityType];
+        log.push(String(entityType).padStart(30) + String(entitiesOfKind.__process_runs).padStart(13) + String(entitiesOfKind.__merge_runs).padStart(13) + String(entitiesOfKind.__process_time).padStart(25) + String(entitiesOfKind.__merge_time).padStart(25));
+        delete entitiesOfKind.__process_time;
+        delete entitiesOfKind.__process_runs;
+        delete entitiesOfKind.__merge_time;
+        delete entitiesOfKind.__merge_runs;
+    }
+    console.log(log.join('\n'));
     return { entities, result };
 };
 export const denormalize = (input, schema, entities) => {
