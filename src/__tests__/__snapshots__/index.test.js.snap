@@ -132,9 +132,3 @@ Object {
   "result": "456",
 }
 `;
-
-exports[`normalize uses the non-normalized input when getting the ID for an entity 2`] = `
-Array [
-  "[{\\"user\\":{\\"id\\":\\"456\\"}},{\\"user\\":{\\"id\\":\\"456\\"}},null]",
-]
-`;

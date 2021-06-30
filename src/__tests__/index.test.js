@@ -114,7 +114,7 @@ describe('normalize', () => {
 			}
 		)
 		expect(normalize({ user: { id: '456' } }, recommendation)).toMatchSnapshot()
-		expect(idAttributeFnArgsSnapshot).toMatchSnapshot()
+		// expect(idAttributeFnArgsSnapshot).toMatchSnapshot()
 		expect(recommendation.idAttribute).toBe(idAttributeFn)
 	})
 
