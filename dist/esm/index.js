@@ -1,3 +1,4 @@
+import * as original from './original.js';
 const compileSchema = (schema) => {
     if (schema === undefined || schema === null) {
         console.warn("Nil schemas are depricated.");
@@ -141,10 +142,39 @@ const _overrideDefaultsDuringMigration = (schema, defaults, visitedSchemaElement
     }
     return newSchema;
 };
+const getOriginalSchema = (schema, visitedSchemaElements = new Map()) => {
+    const cachedSchema = visitedSchemaElements.get(schema);
+    if (cachedSchema !== undefined) {
+        return cachedSchema;
+    }
+    let originalSchema;
+    if (schema instanceof EntitySchema ||
+        schema instanceof ValuesSchema ||
+        schema instanceof ArraySchema ||
+        schema instanceof ObjectSchema ||
+        schema instanceof UnionSchema) {
+        originalSchema = schema.original;
+    }
+    else if (Array.isArray(schema)) {
+        originalSchema = getOriginalSchema(schema[0]);
+    }
+    else if (typeof schema === 'object') {
+        originalSchema = {};
+        for (const key in schema) {
+            originalSchema[key] = getOriginalSchema(schema[key]);
+        }
+    }
+    else {
+        originalSchema = schema;
+    }
+    visitedSchemaElements.set(schema, originalSchema);
+    return originalSchema;
+};
 class EntitySchema {
     constructor(key, definition = {}, options = {}) {
         this.__id = maxId++; // TODO: for debugging purposes. remove?
         this.schema = {};
+        this.original = new original.schema.Entity(key, getOriginalSchema(definition), options);
         if (!key || typeof key !== 'string') {
             throw new Error(`Expected a string key for Entity, but found ${key}.`);
         }
@@ -166,6 +196,7 @@ class EntitySchema {
         return this._idAttribute;
     }
     define(definition) {
+        this.original.define(getOriginalSchema(definition));
         // TODO: check if `definition` is an object?
         // TODO: check if it's a plain object, so that it's safe to iterate over schema without `hasOwnProperty`
         this.schema = Object.assign(this.schema || {}, compilePlainObjectMapping(definition));
@@ -265,11 +296,13 @@ class EntitySchema {
 class ObjectSchema {
     constructor(definition) {
         this.schema = {};
+        this.original = new original.schema.Object(getOriginalSchema(definition));
         this.define(definition);
     }
     // TODO: DRY with EntitySchema.define?
     // TODO: stale comment: // TODO: now there is a difference, should we compile children schemas and should there be more tests?
     define(definition) {
+        this.original.define(getOriginalSchema(definition));
         // TODO: check if `definition` is an object?
         // TODO: check if it's a plain object, so that it's safe to iterate over schema without `hasOwnProperty`
         this.schema = Object.assign(this.schema || {}, compilePlainObjectMapping(definition));
@@ -314,8 +347,11 @@ class ObjectSchema {
     }
 }
 class PolymorphicSchema {
-    constructor(definition, schemaAttribute) {
+    constructor() {
+        this._normalizeValue = this._normalizeValue1;
         this.schema = {};
+    }
+    _constructor(definition, schemaAttribute) {
         this._schemaAttribute = undefined;
         if (schemaAttribute) {
             this._schemaAttribute = typeof schemaAttribute === 'string' ? (input) => input[schemaAttribute] : schemaAttribute;
@@ -327,6 +363,7 @@ class PolymorphicSchema {
         this.define(definition);
     }
     define(definition) {
+        this.original.define(getOriginalSchema(definition));
         if (this._schemaAttribute !== undefined) {
             if (definition instanceof EntitySchema ||
                 definition instanceof ArraySchema ||
@@ -378,6 +415,11 @@ class PolymorphicSchema {
     }
 }
 class ValuesSchema extends PolymorphicSchema {
+    constructor(definition, schemaAttribute) {
+        super();
+        this.original = new original.schema.Values(getOriginalSchema(definition), schemaAttribute);
+        this._constructor(definition, schemaAttribute);
+    }
     normalize(input, _parent, _keyInParent, entities, visited) {
         if (typeof input !== 'object' || input === null) {
             return input;
@@ -405,7 +447,9 @@ class ValuesSchema extends PolymorphicSchema {
 }
 class ArraySchema extends PolymorphicSchema {
     constructor(definition, schemaAttribute, filterNullish = true) {
-        super(definition, schemaAttribute);
+        super();
+        this.original = new original.schema.Array(getOriginalSchema(definition), schemaAttribute);
+        this._constructor(definition, schemaAttribute);
         this.filterNullish = filterNullish;
     }
     normalize(input, parent, keyInParent, entities, visited) {
@@ -441,10 +485,12 @@ class ArraySchema extends PolymorphicSchema {
 // TODO: this one has meaning only with _normalizeValue2
 class UnionSchema extends PolymorphicSchema {
     constructor(definition, schemaAttribute) {
+        super();
+        this.original = new original.schema.Union(getOriginalSchema(definition), schemaAttribute);
         if (!schemaAttribute) {
             throw new Error('Expected option "schemaAttribute" not found on UnionSchema.');
         }
-        super(definition, schemaAttribute);
+        this._constructor(definition, schemaAttribute);
     }
     normalize(input, parent, keyInParent, entities, visited) {
         return this._normalizeValue(input, parent, keyInParent, entities, visited);
@@ -466,74 +512,104 @@ export const schema = {
 // 	entities: Collections,
 // }
 export const normalize = (input, schema, circularDependencies = false) => {
-    // TODO: not sure why we should throw here but not deeper in the tree (there we just return value)
-    if (typeof input !== 'object' || input === null) {
-        throw new Error(`Unexpected input given to normalize. Expected type to be "object", found "${input === null ? 'null' : typeof input}".`);
+    try {
+        // TODO: not sure why we should throw here but not deeper in the tree (there we just return value)
+        if (typeof input !== 'object' || input === null) {
+            throw new Error(`Unexpected input given to normalize. Expected type to be "object", found "${input === null ? 'null' : typeof input}".`);
+        }
+        if (schema === undefined || schema === null) {
+            throw new Error("Nil schemas are depricated.");
+        }
+        const entities = {};
+        const visitedEntities = {};
+        const visited = circularDependencies ? (input, entityType, id) => {
+            if (!(entityType in visitedEntities)) {
+                visitedEntities[entityType] = {};
+            }
+            if (!(id in visitedEntities[entityType])) {
+                visitedEntities[entityType][id] = new Set();
+            }
+            if (visitedEntities[entityType][id].has(input)) {
+                return true;
+            }
+            visitedEntities[entityType][id].add(input);
+            return false;
+        } : () => false;
+        const compiledSchema = compileSchema(schema);
+        const result = compiledSchema.normalize(input, input, null, entities, visited);
+        const res = { entities, result };
+        const original_res = original.normalize(input, getOriginalSchema(schema));
+        return res;
     }
-    if (schema === undefined || schema === null) {
-        throw new Error("Nil schemas are depricated.");
+    catch (e) {
+        console.log("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
+        console.log("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
+        console.log("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
+        console.log(e);
+        console.log("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
+        console.log("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
+        console.log("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
+        throw e;
     }
-    const entities = {};
-    const visitedEntities = {};
-    const visited = circularDependencies ? (input, entityType, id) => {
-        if (!(entityType in visitedEntities)) {
-            visitedEntities[entityType] = {};
-        }
-        if (!(id in visitedEntities[entityType])) {
-            visitedEntities[entityType][id] = new Set();
-        }
-        if (visitedEntities[entityType][id].has(input)) {
-            return true;
-        }
-        visitedEntities[entityType][id].add(input);
-        return false;
-    } : () => false;
-    const result = compileSchema(schema).normalize(input, input, null, entities, visited);
-    return { entities, result };
 };
 export const denormalize = (input, schema, entities) => {
-    if (schema === undefined || schema === null) {
-        throw new Error("Nil schemas are depricated.");
-    }
-    if (input === undefined) {
-        return undefined;
-    }
-    const cache = {};
-    function unvisit(input, schema) {
-        if (input === undefined || input === null) {
-            return input;
+    try {
+        if (schema === undefined || schema === null) {
+            throw new Error("Nil schemas are depricated.");
         }
-        if (schema instanceof EntitySchema) {
-            const id = input;
-            const schemaKey = schema.key;
-            let entity;
-            if (typeof id === 'object') {
-                entity = id;
-            }
-            else {
-                entity = entities[schemaKey] && entities[schemaKey][id];
-            }
-            if (entity === undefined && schema instanceof EntitySchema) {
-                entity = schema._fallbackStrategy(id, schema);
-            }
-            if (typeof entity !== 'object' || entity === null) {
-                return entity;
-            }
-            if (!cache[schema.key]) {
-                cache[schema.key] = {};
-            }
-            if (!cache[schema.key][id]) {
-                // Ensure we don't mutate it non-immutable objects
-                const entityCopy = Object.assign({}, entity);
-                // Need to set this first so that if it is referenced further within the
-                // denormalization the reference will already exist.
-                cache[schema.key][id] = entityCopy;
-                cache[schema.key][id] = schema.denormalize(entityCopy, unvisit);
-            }
-            return cache[schema.key][id];
+        if (input === undefined) {
+            return undefined;
         }
-        return schema.denormalize(input, unvisit);
+        const cache = {};
+        function unvisit(input, schema) {
+            if (input === undefined || input === null) {
+                return input;
+            }
+            if (schema instanceof EntitySchema) {
+                const id = input;
+                const schemaKey = schema.key;
+                let entity;
+                if (typeof id === 'object') {
+                    entity = id;
+                }
+                else {
+                    entity = entities[schemaKey] && entities[schemaKey][id];
+                }
+                if (entity === undefined && schema instanceof EntitySchema) {
+                    entity = schema._fallbackStrategy(id, schema);
+                }
+                if (typeof entity !== 'object' || entity === null) {
+                    return entity;
+                }
+                if (!cache[schema.key]) {
+                    cache[schema.key] = {};
+                }
+                if (!cache[schema.key][id]) {
+                    // Ensure we don't mutate it non-immutable objects
+                    const entityCopy = Object.assign({}, entity);
+                    // Need to set this first so that if it is referenced further within the
+                    // denormalization the reference will already exist.
+                    cache[schema.key][id] = entityCopy;
+                    cache[schema.key][id] = schema.denormalize(entityCopy, unvisit);
+                }
+                return cache[schema.key][id];
+            }
+            return schema.denormalize(input, unvisit);
+        }
+        const compiledSchema = compileSchema(schema);
+        const result = unvisit(input, compiledSchema);
+        const original_result = original.denormalize(input, getOriginalSchema(schema), entities);
+        return result;
     }
-    return unvisit(input, compileSchema(schema));
+    catch (e) {
+        console.log("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
+        console.log("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
+        console.log("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
+        console.log(e);
+        console.log("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
+        console.log("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
+        console.log("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
+        throw e;
+    }
 };
 //# sourceMappingURL=index.js.map

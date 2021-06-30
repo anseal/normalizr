@@ -1,4 +1,4 @@
-
+import * as original from './original.js'
 
 export type StrategyFunction = (value: Input, parent: Input, keyInParent: KeyInParent) => any
 export type SchemaFunction = (value: Input, parent: Input, keyInParent: KeyInParent) => string
@@ -196,6 +196,35 @@ const _overrideDefaultsDuringMigration = (schema: CompiledSchema | CompiledPlain
 	return newSchema
 }
 
+const getOriginalSchema = (schema: Schema, visitedSchemaElements = new Map()): Schema => {
+	const cachedSchema = visitedSchemaElements.get(schema)
+	if( cachedSchema !== undefined ) { return cachedSchema }
+
+	let originalSchema: Schema
+
+	if (
+		schema instanceof EntitySchema ||
+		schema instanceof ValuesSchema ||
+		schema instanceof ArraySchema ||
+		schema instanceof ObjectSchema ||
+		schema instanceof UnionSchema
+	) {
+		originalSchema = schema.original
+	} else if( Array.isArray(schema) ) {
+		originalSchema = getOriginalSchema(schema[0])
+	} else if( typeof schema === 'object' ) {
+		originalSchema = {}
+		for( const key in schema ) {
+			originalSchema[key] = getOriginalSchema(schema[key])
+		}
+	} else {
+		originalSchema = schema
+	}
+
+	visitedSchemaElements.set(schema, originalSchema)
+	return originalSchema
+}
+
 class EntitySchema {
 	__id: string | number = maxId++ // TODO: for debugging purposes. remove?
 	_key: string
@@ -205,8 +234,10 @@ class EntitySchema {
 	_processStrategy: StrategyFunction
 	_fallbackStrategy: FallbackFunction
 	schema: CompiledPlainObjectSchema = {}
+	original: any
 
 	constructor(key: Key, definition: PlainObjectSchema = {}, options: EntityOptions = {}) {
+		this.original = new original.schema.Entity(key, getOriginalSchema(definition), options)
 		if (!key || typeof key !== 'string') {
 			throw new Error(`Expected a string key for Entity, but found ${key}.`)
 		}
@@ -239,6 +270,7 @@ class EntitySchema {
 	}
 
 	define(definition: PlainObjectSchema) {
+		this.original.define(getOriginalSchema(definition))
 		// TODO: check if `definition` is an object?
 		// TODO: check if it's a plain object, so that it's safe to iterate over schema without `hasOwnProperty`
 		this.schema = Object.assign(this.schema || {}, compilePlainObjectMapping(definition));
@@ -345,14 +377,17 @@ class EntitySchema {
 
 class ObjectSchema {
 	schema: CompiledPlainObjectSchema = {}
+	original: any
 
 	constructor(definition: PlainObjectSchema) {
+		this.original = new original.schema.Object(getOriginalSchema(definition))
 		this.define(definition)
 	}
 
 	// TODO: DRY with EntitySchema.define?
 	// TODO: stale comment: // TODO: now there is a difference, should we compile children schemas and should there be more tests?
 	define(definition: PlainObjectSchema) {
+		this.original.define(getOriginalSchema(definition))
 		// TODO: check if `definition` is an object?
 		// TODO: check if it's a plain object, so that it's safe to iterate over schema without `hasOwnProperty`
 		this.schema = Object.assign(this.schema || {}, compilePlainObjectMapping(definition));
@@ -400,10 +435,11 @@ class ObjectSchema {
 
 class PolymorphicSchema {
 	_schemaAttribute: SchemaAttribute | undefined // TODO: | Key
-	_normalizeValue: NormalizeValue
+	_normalizeValue: NormalizeValue = this._normalizeValue1
 	schema: CompiledSchema | CompiledPlainObjectSchema = {}
+	original: any
 
-	constructor(definition: Schema, schemaAttribute?: SchemaValueFunction) {
+	_constructor(definition: Schema, schemaAttribute?: SchemaValueFunction) {
 		this._schemaAttribute = undefined
 		if (schemaAttribute) {
 			this._schemaAttribute = typeof schemaAttribute === 'string' ? (input: Input) => input[schemaAttribute] : schemaAttribute
@@ -415,6 +451,7 @@ class PolymorphicSchema {
 	}
 
 	define(definition: Schema) {
+		this.original.define(getOriginalSchema(definition))
 		if( this._schemaAttribute !== undefined ) {
 			if(
 				definition instanceof EntitySchema ||
@@ -470,6 +507,12 @@ class PolymorphicSchema {
 }
 
 class ValuesSchema extends PolymorphicSchema {
+	original: any
+	constructor(definition: Schema, schemaAttribute?: SchemaValueFunction) {
+		super()
+		this.original = new original.schema.Values(getOriginalSchema(definition), schemaAttribute)
+		this._constructor(definition, schemaAttribute)
+	}
 	normalize(input: Input, _parent: Input, _keyInParent: KeyInParent, entities: Entities, visited: Visited) {
 		if (typeof input !== 'object' || input === null) {
 			return input
@@ -502,9 +545,12 @@ class ValuesSchema extends PolymorphicSchema {
 
 class ArraySchema extends PolymorphicSchema {
 	filterNullish: boolean
+	original: any
 
 	constructor(definition: Schema, schemaAttribute?: SchemaValueFunction, filterNullish = true) {
-		super(definition, schemaAttribute)
+		super()
+		this.original = new original.schema.Array(getOriginalSchema(definition), schemaAttribute)
+		this._constructor(definition, schemaAttribute)
 		this.filterNullish = filterNullish
 	}
 	normalize(input: Input, parent: Input, keyInParent: KeyInParent, entities: Entities, visited: Visited) {
@@ -542,11 +588,14 @@ class ArraySchema extends PolymorphicSchema {
 
 // TODO: this one has meaning only with _normalizeValue2
 class UnionSchema extends PolymorphicSchema {
+	original: any
 	constructor(definition: Schema, schemaAttribute: SchemaValueFunction) {
+		super()
+		this.original = new original.schema.Union(getOriginalSchema(definition), schemaAttribute)
 		if (!schemaAttribute) {
 			throw new Error('Expected option "schemaAttribute" not found on UnionSchema.')
 		}
-		super(definition, schemaAttribute)
+		this._constructor(definition, schemaAttribute)
 	}
 
 	normalize(input: Input, parent: Input, keyInParent: KeyInParent, entities: Entities, visited: Visited) {
@@ -573,6 +622,7 @@ export const schema = {
 // }
 
 export const normalize = (input: Input, schema: Schema, circularDependencies = false) => {
+	try {
 	// TODO: not sure why we should throw here but not deeper in the tree (there we just return value)
 	if (typeof input !== 'object' || input === null) {
 		throw new Error(
@@ -602,11 +652,25 @@ export const normalize = (input: Input, schema: Schema, circularDependencies = f
 		return false
 	} : () => false
 	
-	const result = compileSchema(schema).normalize(input, input, null, entities, visited)
-	return { entities, result }
+	const compiledSchema = compileSchema(schema)
+	const result = compiledSchema.normalize(input, input, null, entities, visited)
+	const res = { entities, result }
+	const original_res = original.normalize(input, getOriginalSchema(schema))
+	return res
+	} catch(e) {
+		console.log("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
+		console.log("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
+		console.log("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
+		console.log(e)
+		console.log("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
+		console.log("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
+		console.log("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
+		throw e
+	}
 }
 
 export const denormalize = (input: Input, schema: Schema, entities: Entities) => {
+	try {
 	if( schema === undefined || schema === null ) {
 		throw new Error("Nil schemas are depricated.")
 	}
@@ -657,5 +721,18 @@ export const denormalize = (input: Input, schema: Schema, entities: Entities) =>
 		return schema.denormalize(input, unvisit)
 	}
 
-	return unvisit(input, compileSchema(schema))
+	const compiledSchema = compileSchema(schema)
+	const result = unvisit(input, compiledSchema)
+	const original_result = original.denormalize(input, getOriginalSchema(schema), entities)
+	return result
+	} catch(e) {
+		console.log("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
+		console.log("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
+		console.log("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
+		console.log(e)
+		console.log("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
+		console.log("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
+		console.log("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
+		throw e
+	}
 }
