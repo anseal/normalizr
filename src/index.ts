@@ -1,4 +1,5 @@
 
+export { cloneWithJSON, clonePOJO, deepEqualWithJSON, deepEqualSameShape } from './utils.js'
 
 export type StrategyFunction = (value: Input, parent: Input, keyInParent: KeyInParent) => any
 export type SchemaFunction = (value: Input, parent: Input, keyInParent: KeyInParent) => string
