@@ -61,7 +61,7 @@ describe('denormalize', () => {
 		}
 		expect(denormalize('123', article, entities)).toMatchSnapshot()
 	})
-
+/*
 	test('set to undefined if schema key is not in entities', () => {
 		const user = new schema.Entity('users')
 		const comment = new schema.Entity('comments', {
@@ -88,7 +88,7 @@ describe('denormalize', () => {
 		}
 		expect(denormalize('123', article, entities)).toMatchSnapshot()
 	})
-
+*/
 	test('does not modify the original entities', () => {
 		const user = new schema.Entity('users')
 		const article = new schema.Entity('articles', { author: user })
