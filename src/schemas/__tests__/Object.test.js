@@ -1,7 +1,7 @@
 // eslint-env jest
 import { normalize, schema } from '../../'
 
-describe(`${schema.Object.name} normalization`, () => {
+describe('ObjectSchema normalization', () => {
 	test('normalizes an object', () => {
 		const userSchema = new schema.Entity('user')
 		const object = new schema.Object({
@@ -10,7 +10,7 @@ describe(`${schema.Object.name} normalization`, () => {
 		expect(normalize({ user: { id: 1 } }, object)).toMatchSnapshot()
 	})
 
-	test(`normalizes plain objects as shorthand for ${schema.Object.name}`, () => {
+	test('normalizes plain objects as shorthand for ObjectSchema', () => {
 		const userSchema = new schema.Entity('user')
 		expect(normalize({ user: { id: 1 } }, { user: userSchema })).toMatchSnapshot()
 	})

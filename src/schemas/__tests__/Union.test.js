@@ -1,7 +1,7 @@
 // eslint-env jest
 import { normalize, schema } from '../../'
 
-describe(`${schema.Union.name} normalization`, () => {
+describe('UnionSchema normalization', () => {
 	test('throws if not given a schemaAttribute', () => {
 		expect(() => new schema.Union({})).toThrow()
 	})
