@@ -213,11 +213,11 @@ const getOriginalSchema = (schema: Schema, visitedSchemaElements = new Map()): S
 	) {
 		originalSchema = schema.original
 	} else if( Array.isArray(schema) ) {
-		originalSchema = getOriginalSchema(schema[0])
+		originalSchema = [ getOriginalSchema(schema[0], visitedSchemaElements) ]
 	} else if( typeof schema === 'object' ) {
 		originalSchema = {}
 		for( const key in schema ) {
-			originalSchema[key] = getOriginalSchema(schema[key])
+			originalSchema[key] = getOriginalSchema(schema[key], visitedSchemaElements)
 		}
 	} else {
 		originalSchema = schema
