@@ -20,8 +20,12 @@
 	],
 	"files": [
 		"dist/cjs/index.js",
+		"dist/cjs/original.js",
+		"dist/cjs/utils.js",
 		"dist/cjs/package.json",
 		"dist/esm/index.js",
+		"dist/esm/original.js",
+		"dist/esm/utils.js",
 		"dist/esm/package.json",
 		"index.d.ts",
 		"LICENSE",
