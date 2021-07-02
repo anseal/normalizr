@@ -1,4 +1,6 @@
 import * as original from './original.js';
+import { getCallFrames, deepEqualDiffShape } from './utils.js';
+import _ from 'lodash';
 const compileSchema = (schema) => {
     if (schema === undefined || schema === null) {
         console.warn("Nil schemas are depricated.");
@@ -156,12 +158,12 @@ const getOriginalSchema = (schema, visitedSchemaElements = new Map()) => {
         originalSchema = schema.original;
     }
     else if (Array.isArray(schema)) {
-        originalSchema = getOriginalSchema(schema[0]);
+        originalSchema = [getOriginalSchema(schema[0], visitedSchemaElements)];
     }
     else if (typeof schema === 'object') {
         originalSchema = {};
         for (const key in schema) {
-            originalSchema[key] = getOriginalSchema(schema[key]);
+            originalSchema[key] = getOriginalSchema(schema[key], visitedSchemaElements);
         }
     }
     else {
@@ -174,6 +176,11 @@ class EntitySchema {
     constructor(key, definition = {}, options = {}) {
         this.__id = maxId++; // TODO: for debugging purposes. remove?
         this.schema = {};
+        this.__globalId = "";
+        const path = getCallFrames(2);
+        if (path && path.length) {
+            this.__globalId = path[0];
+        }
         this.original = new original.schema.Entity(key, getOriginalSchema(definition), options);
         if (!key || typeof key !== 'string') {
             throw new Error(`Expected a string key for Entity, but found ${key}.`);
@@ -296,6 +303,11 @@ class EntitySchema {
 class ObjectSchema {
     constructor(definition) {
         this.schema = {};
+        this.__globalId = "";
+        const path = getCallFrames(2);
+        if (path && path.length) {
+            this.__globalId = path[0];
+        }
         this.original = new original.schema.Object(getOriginalSchema(definition));
         this.define(definition);
     }
@@ -417,6 +429,11 @@ class PolymorphicSchema {
 class ValuesSchema extends PolymorphicSchema {
     constructor(definition, schemaAttribute) {
         super();
+        this.__globalId = "";
+        const path = getCallFrames(2);
+        if (path && path.length) {
+            this.__globalId = path[0];
+        }
         this.original = new original.schema.Values(getOriginalSchema(definition), schemaAttribute);
         this._constructor(definition, schemaAttribute);
     }
@@ -448,6 +465,11 @@ class ValuesSchema extends PolymorphicSchema {
 class ArraySchema extends PolymorphicSchema {
     constructor(definition, schemaAttribute, filterNullish = true) {
         super();
+        this.__globalId = "";
+        const path = getCallFrames(2);
+        if (path && path.length) {
+            this.__globalId = path[0];
+        }
         this.original = new original.schema.Array(getOriginalSchema(definition), schemaAttribute);
         this._constructor(definition, schemaAttribute);
         this.filterNullish = filterNullish;
@@ -486,6 +508,11 @@ class ArraySchema extends PolymorphicSchema {
 class UnionSchema extends PolymorphicSchema {
     constructor(definition, schemaAttribute) {
         super();
+        this.__globalId = "";
+        const path = getCallFrames(2);
+        if (path && path.length) {
+            this.__globalId = path[0];
+        }
         this.original = new original.schema.Union(getOriginalSchema(definition), schemaAttribute);
         if (!schemaAttribute) {
             throw new Error('Expected option "schemaAttribute" not found on UnionSchema.');
@@ -511,7 +538,38 @@ export const schema = {
 // 	result: Result,
 // 	entities: Collections,
 // }
-export const normalize = (input, schema, circularDependencies = false) => {
+function logError(msg, objs) {
+    console.log("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n", "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n", "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n", new Error(msg), objs.map(([name, obj]) => [
+        "---------------------------------------",
+        name,
+        JSON.stringify(obj)
+    ]).flat().join('\n'), "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n", "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n", "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n");
+}
+function logException(e) {
+    console.log("\n<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<\n", e, "\n>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\n");
+}
+export const normalize = (input, schema, __getId, __resetId, circularDependencies = false) => {
+    console.log('::::::::::: normalize');
+    // console.log(schema)
+    const curId = __getId ? __getId() : 0;
+    const inputClone = _.cloneDeep(input);
+    // const inputClone = clonePojoGraph(input)
+    // if( _.isEqual(inputClone, input) === false ) {
+    // // if( deepEqualWithJSON(inputClone, input) === false ) {
+    // 	logError("normalizr: unexpected", [["input", input], ["inputClone", inputClone]])
+    // }
+    let excectionFromMine;
+    let excectionFromOriginal;
+    let originalResult;
+    let res;
+    try {
+        originalResult = original.normalize(inputClone, getOriginalSchema(schema));
+    }
+    catch (e) {
+        excectionFromOriginal = e;
+    }
+    if (__resetId)
+        __resetId(curId);
     try {
         // TODO: not sure why we should throw here but not deeper in the tree (there we just return value)
         if (typeof input !== 'object' || input === null) {
@@ -537,22 +595,49 @@ export const normalize = (input, schema, circularDependencies = false) => {
         } : () => false;
         const compiledSchema = compileSchema(schema);
         const result = compiledSchema.normalize(input, input, null, entities, visited);
-        const res = { entities, result };
-        const original_res = original.normalize(input, getOriginalSchema(schema));
-        return res;
+        res = { entities, result };
     }
     catch (e) {
-        console.log("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
-        console.log("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
-        console.log("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
-        console.log(e);
-        console.log("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
-        console.log("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
-        console.log("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
-        throw e;
+        excectionFromMine = e;
+        // console.log(schema)
+        // logException(e)
     }
+    if (Boolean(excectionFromMine) !== Boolean(excectionFromOriginal)) {
+        console.log(schema);
+        logException(excectionFromMine);
+        logException(excectionFromOriginal);
+    }
+    else if (deepEqualDiffShape(originalResult, res) === false || _.isEqual(originalResult, res) === false) {
+        console.log(schema);
+        logError("normalizr: mismatch with the original", [["input", input], ["originalResult", originalResult], ["result", res]]);
+    }
+    if (excectionFromOriginal)
+        throw excectionFromOriginal;
+    // if( excectionFromMine ) throw excectionFromMine
+    return originalResult;
+    // return res
 };
 export const denormalize = (input, schema, entities) => {
+    console.log('::::::::::: denormalize');
+    // console.log(schema)
+    // const inputClone = clonePojoGrpah(input)
+    // const entitiesClone = clonePojoGrpah(entities)
+    // if( deepEqualWithJSON(inputClone, input) === false ) {
+    // 	logError("normalizr: unexpected", [["input", input], ["inputClone",inputClone]])
+    // }
+    // if( deepEqualWithJSON(entitiesClone, entities) === false ) {
+    // 	logError("normalizr: unexpected", [["entities", entities], ["entitiesClone",entitiesClone]])
+    // }
+    let excectionFromMine;
+    let excectionFromOriginal;
+    let originalResult;
+    let result;
+    try {
+        originalResult = original.denormalize(input, getOriginalSchema(schema), entities);
+    }
+    catch (e) {
+        excectionFromOriginal = e;
+    }
     try {
         if (schema === undefined || schema === null) {
             throw new Error("Nil schemas are depricated.");
@@ -597,19 +682,24 @@ export const denormalize = (input, schema, entities) => {
             return schema.denormalize(input, unvisit);
         }
         const compiledSchema = compileSchema(schema);
-        const result = unvisit(input, compiledSchema);
-        const original_result = original.denormalize(input, getOriginalSchema(schema), entities);
-        return result;
+        result = unvisit(input, compiledSchema);
     }
     catch (e) {
-        console.log("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
-        console.log("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
-        console.log("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
-        console.log(e);
-        console.log("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
-        console.log("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
-        console.log("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
-        throw e;
+        excectionFromMine = e;
     }
+    if (Boolean(excectionFromMine) !== Boolean(excectionFromOriginal)) {
+        console.log(schema);
+        logException(excectionFromMine);
+        logException(excectionFromOriginal);
+    }
+    else if (deepEqualDiffShape(originalResult, result) === false || _.isEqual(originalResult, result) === false) {
+        console.log(schema);
+        logError("normalizr: mismatch with the original", [["input", input], ["originalResult", originalResult], ["result", result]]);
+    }
+    if (excectionFromOriginal)
+        throw excectionFromOriginal;
+    // if( excectionFromMine ) throw excectionFromMine
+    return originalResult;
+    // return result
 };
 //# sourceMappingURL=index.js.map

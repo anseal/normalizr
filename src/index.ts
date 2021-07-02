@@ -1,6 +1,8 @@
 import * as original from './original.js'
+import { getCallFrames, clonePojoTree, clonePojoGraph, deepEqualSameShape, deepEqualWithJSON, deepEqualDiffShape } from './utils.js'
+import _ from 'lodash'
 
-export { cloneWithJSON, clonePOJO, deepEqualWithJSON, deepEqualSameShape } from './utils.js'
+// export { cloneWithJSON, clonePojoTree, deepEqualWithJSON, deepEqualSameShape } from './utils.js'
 
 export type StrategyFunction = (value: Input, parent: Input, keyInParent: KeyInParent) => any
 export type SchemaFunction = (value: Input, parent: Input, keyInParent: KeyInParent) => string
@@ -237,8 +239,13 @@ class EntitySchema {
 	_fallbackStrategy: FallbackFunction
 	schema: CompiledPlainObjectSchema = {}
 	original: any
+	__globalId: string = ""
 
 	constructor(key: Key, definition: PlainObjectSchema = {}, options: EntityOptions = {}) {
+		const path = getCallFrames(2)
+		if( path && path.length ) {
+			this.__globalId = path[0]
+		}
 		this.original = new original.schema.Entity(key, getOriginalSchema(definition), options)
 		if (!key || typeof key !== 'string') {
 			throw new Error(`Expected a string key for Entity, but found ${key}.`)
@@ -380,8 +387,13 @@ class EntitySchema {
 class ObjectSchema {
 	schema: CompiledPlainObjectSchema = {}
 	original: any
+	__globalId: string = ""
 
 	constructor(definition: PlainObjectSchema) {
+		const path = getCallFrames(2)
+		if( path && path.length ) {
+			this.__globalId = path[0]
+		}
 		this.original = new original.schema.Object(getOriginalSchema(definition))
 		this.define(definition)
 	}
@@ -510,8 +522,14 @@ class PolymorphicSchema {
 
 class ValuesSchema extends PolymorphicSchema {
 	original: any
+	__globalId: string = ""
+
 	constructor(definition: Schema, schemaAttribute?: SchemaValueFunction) {
 		super()
+		const path = getCallFrames(2)
+		if( path && path.length ) {
+			this.__globalId = path[0]
+		}
 		this.original = new original.schema.Values(getOriginalSchema(definition), schemaAttribute)
 		this._constructor(definition, schemaAttribute)
 	}
@@ -548,9 +566,14 @@ class ValuesSchema extends PolymorphicSchema {
 class ArraySchema extends PolymorphicSchema {
 	filterNullish: boolean
 	original: any
+	__globalId: string = ""
 
 	constructor(definition: Schema, schemaAttribute?: SchemaValueFunction, filterNullish = true) {
 		super()
+		const path = getCallFrames(2)
+		if( path && path.length ) {
+			this.__globalId = path[0]
+		}
 		this.original = new original.schema.Array(getOriginalSchema(definition), schemaAttribute)
 		this._constructor(definition, schemaAttribute)
 		this.filterNullish = filterNullish
@@ -591,8 +614,14 @@ class ArraySchema extends PolymorphicSchema {
 // TODO: this one has meaning only with _normalizeValue2
 class UnionSchema extends PolymorphicSchema {
 	original: any
+	__globalId: string = ""
+
 	constructor(definition: Schema, schemaAttribute: SchemaValueFunction) {
 		super()
+		const path = getCallFrames(2)
+		if( path && path.length ) {
+			this.__globalId = path[0]
+		}
 		this.original = new original.schema.Union(getOriginalSchema(definition), schemaAttribute)
 		if (!schemaAttribute) {
 			throw new Error('Expected option "schemaAttribute" not found on UnionSchema.')
@@ -623,7 +652,53 @@ export const schema = {
 // 	entities: Collections,
 // }
 
-export const normalize = (input: Input, schema: Schema, circularDependencies = false) => {
+function logError(msg: string, objs: [string,any][]) {
+	console.log(
+		"!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n",
+		"!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n",
+		"!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n",
+		new Error(msg),
+		objs.map(([name,obj]) => [
+			"---------------------------------------",
+			name,
+			JSON.stringify(obj)
+		]).flat().join('\n'),
+		"!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n",
+		"!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n",
+		"!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n",
+	)
+}
+function logException(e: Error | undefined) {
+	console.log("\n<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<\n", e, "\n>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\n")
+}
+
+
+export const normalize = (input: Input, schema: Schema, __getId?: any, __resetId?: any, circularDependencies = false) => {
+	console.log('::::::::::: normalize')
+	// console.log(schema)
+
+	const curId = __getId ? __getId() : 0
+
+	const inputClone = _.cloneDeep(input)
+	// const inputClone = clonePojoGraph(input)
+	// if( _.isEqual(inputClone, input) === false ) {
+	// // if( deepEqualWithJSON(inputClone, input) === false ) {
+	// 	logError("normalizr: unexpected", [["input", input], ["inputClone", inputClone]])
+	// }
+
+	let excectionFromMine: Error | undefined
+	let excectionFromOriginal: Error | undefined
+
+	let originalResult: any
+	let res: any
+	try {
+		originalResult = original.normalize(inputClone, getOriginalSchema(schema))
+	} catch(e) {
+		excectionFromOriginal = e
+	}
+
+	if( __resetId ) __resetId(curId)
+
 	try {
 	// TODO: not sure why we should throw here but not deeper in the tree (there we just return value)
 	if (typeof input !== 'object' || input === null) {
@@ -653,25 +728,55 @@ export const normalize = (input: Input, schema: Schema, circularDependencies = f
 		visitedEntities[entityType][id].add(input)
 		return false
 	} : () => false
-	
+
 	const compiledSchema = compileSchema(schema)
 	const result = compiledSchema.normalize(input, input, null, entities, visited)
-	const res = { entities, result }
-	const original_res = original.normalize(input, getOriginalSchema(schema))
-	return res
+	res = { entities, result }
+
 	} catch(e) {
-		console.log("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
-		console.log("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
-		console.log("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
-		console.log(e)
-		console.log("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
-		console.log("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
-		console.log("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
-		throw e
+		excectionFromMine = e
+		// console.log(schema)
+		// logException(e)
 	}
+	if( Boolean(excectionFromMine) !== Boolean(excectionFromOriginal) ) {
+		console.log(schema)
+		logException(excectionFromMine)
+		logException(excectionFromOriginal)
+	} else if( deepEqualDiffShape(originalResult, res) === false || _.isEqual(originalResult, res) === false ) {
+		console.log(schema)
+		logError("normalizr: mismatch with the original", [["input", input], ["originalResult", originalResult], ["result", res]])
+	}
+	if( excectionFromOriginal ) throw excectionFromOriginal
+	// if( excectionFromMine ) throw excectionFromMine
+
+	return originalResult
+	// return res
 }
 
 export const denormalize = (input: Input, schema: Schema, entities: Entities) => {
+	console.log('::::::::::: denormalize')
+	// console.log(schema)
+
+	// const inputClone = clonePojoGrpah(input)
+	// const entitiesClone = clonePojoGrpah(entities)
+	// if( deepEqualWithJSON(inputClone, input) === false ) {
+	// 	logError("normalizr: unexpected", [["input", input], ["inputClone",inputClone]])
+	// }
+	// if( deepEqualWithJSON(entitiesClone, entities) === false ) {
+	// 	logError("normalizr: unexpected", [["entities", entities], ["entitiesClone",entitiesClone]])
+	// }
+
+	let excectionFromMine: Error | undefined
+	let excectionFromOriginal: Error | undefined
+	let originalResult: any
+	let result: any
+
+	try {
+		originalResult = original.denormalize(input, getOriginalSchema(schema), entities)
+	} catch(e) {
+		excectionFromOriginal = e
+	}
+
 	try {
 	if( schema === undefined || schema === null ) {
 		throw new Error("Nil schemas are depricated.")
@@ -688,7 +793,7 @@ export const denormalize = (input: Input, schema: Schema, entities: Entities) =>
 		if (schema instanceof EntitySchema) {
 			const id = input
 			const schemaKey = schema.key
-			let entity
+			let entity: any
 			if (typeof id === 'object') {
 				entity = id
 			} else {
@@ -724,17 +829,22 @@ export const denormalize = (input: Input, schema: Schema, entities: Entities) =>
 	}
 
 	const compiledSchema = compileSchema(schema)
-	const result = unvisit(input, compiledSchema)
-	const original_result = original.denormalize(input, getOriginalSchema(schema), entities)
-	return result
+	result = unvisit(input, compiledSchema)
+
 	} catch(e) {
-		console.log("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
-		console.log("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
-		console.log("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
-		console.log(e)
-		console.log("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
-		console.log("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
-		console.log("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
-		throw e
+		excectionFromMine = e
 	}
+	if( Boolean(excectionFromMine) !== Boolean(excectionFromOriginal) ) {
+		console.log(schema)
+		logException(excectionFromMine)
+		logException(excectionFromOriginal)
+	} else if( deepEqualDiffShape(originalResult, result) === false || _.isEqual(originalResult, result) === false ) {
+		console.log(schema)
+		logError("normalizr: mismatch with the original", [["input", input], ["originalResult", originalResult], ["result", result]])
+	}
+	if( excectionFromOriginal ) throw excectionFromOriginal
+	// if( excectionFromMine ) throw excectionFromMine
+
+	return originalResult
+	// return result
 }
