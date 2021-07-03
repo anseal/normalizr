@@ -249,7 +249,11 @@ class EntitySchema {
 		if (typeof input !== 'object' || input === null) {
 			return input
 		}
-		const id = this._getId(input, parent, keyInParent) // TODO: what if id === `undefined`?
+		let id = this._getId(input, parent, keyInParent) // TODO: what if id === `undefined`?
+		// TODO: add after deprication process is complete... or maybe not
+		// if (id === undefined) {
+		// 	throw new Error('normalizr: `id` is required and setting it in `processStrategy` is depricated')
+		// }
 		const entityType = this._key
 
 		// check the presence first, then check if there would be any merge or it just `identity()` function
@@ -265,6 +269,7 @@ class EntitySchema {
 			return id
 		}
 
+		// TODO: move cirular check up.
 		// TODO: does `existingEntity === undefined` means that `visited() === false`?
 		if(visited(input, entityType, id)) { return id }
 
@@ -323,6 +328,11 @@ class EntitySchema {
 					processedEntity[key] = resolvedSchema.normalize(processedEntity[key], processedEntity, key, entities, visited);
 				}
 			// }
+		}
+
+		// TODO: remove after deprication process is complete
+		if (id === undefined) {
+			id = this._getId(input, parent, keyInParent)
 		}
 
 		if (existingEntity) {
@@ -590,6 +600,10 @@ export const normalize = (input: Input, schema: Schema, circularDependencies = f
 	const visitedEntities: Record<Key,Record<Key,Set<Input>>> = {}
 
 	const visited = circularDependencies ? (input: Input, entityType: Key, id: Key) => {
+		// TODO: we can't use a single `Set` because the same input can be processed with a different schema
+		// but do we really need `Set`s for each id?
+		// this code is a dirty optimization from the original - just a leftover
+		// and in the original `Array`s were used, so that made some sense... but most probably not with `Set`s
 		if (!(entityType in visitedEntities)) {
 			visitedEntities[entityType] = {}
 		}
