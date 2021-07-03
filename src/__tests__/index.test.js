@@ -193,4 +193,17 @@ describe('normalize', () => {
 
 		expect(normalize(input, linkablesSchema)).toMatchSnapshot()
 	})
+
+	// TODO: remove after deprication process is complete
+	test('works with ids generated in processStrategy', () => {
+		let maxId = 0
+		const someSchema = new schema.Entity('something', {}, {
+			processStrategy: entity => {
+				entity.id = maxId++;
+				return entity;
+			},
+		});
+
+		expect(normalize([{ x: 'a' }, { y: 'b' }], [someSchema])).toEqual({ entities: { something: { "0": { id: 0, x: 'a' }, "1": { id: 1, y: 'b' } } }, result: [ 0, 1 ] })
+	})
 })

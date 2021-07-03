@@ -247,7 +247,8 @@ class EntitySchema {
 		if (typeof input !== 'object' || input === null) {
 			return input
 		}
-		let id = this._getId(input, parent, keyInParent) // TODO: what if id === `undefined`?
+		let id = this._getId(input, parent, keyInParent)
+		// TODO: what if `id` is not unique?
 		// TODO: add after deprication process is complete... or maybe not
 		// if (id === undefined) {
 		// 	throw new Error('normalizr: `id` is required and setting it in `processStrategy` is depricated')
