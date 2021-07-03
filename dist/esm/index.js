@@ -548,7 +548,13 @@ function logError(msg, objs) {
 function logException(e) {
     console.log("\n<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<\n", e, "\n>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\n");
 }
-export const normalize = (input, schema, __getId, __resetId, circularDependencies = false) => {
+let __getId;
+let __resetId;
+export const setupParallelRun = (getId, resetId) => {
+    __getId = getId;
+    __resetId = resetId;
+};
+export const normalize = (input, schema, circularDependencies = false) => {
     console.log('::::::::::: normalize');
     // console.log(schema)
     const curId = __getId ? __getId() : 0;

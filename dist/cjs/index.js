@@ -22,7 +22,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.denormalize = exports.normalize = exports.schema = exports.overrideDefaultsDuringMigration = void 0;
+exports.denormalize = exports.normalize = exports.setupParallelRun = exports.schema = exports.overrideDefaultsDuringMigration = void 0;
 const original = __importStar(require("./original.js"));
 const utils_js_1 = require("./utils.js");
 const lodash_1 = __importDefault(require("lodash"));
@@ -574,7 +574,14 @@ function logError(msg, objs) {
 function logException(e) {
     console.log("\n<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<\n", e, "\n>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\n");
 }
-const normalize = (input, schema, __getId, __resetId, circularDependencies = false) => {
+let __getId;
+let __resetId;
+const setupParallelRun = (getId, resetId) => {
+    __getId = getId;
+    __resetId = resetId;
+};
+exports.setupParallelRun = setupParallelRun;
+const normalize = (input, schema, circularDependencies = false) => {
     console.log('::::::::::: normalize');
     // console.log(schema)
     const curId = __getId ? __getId() : 0;

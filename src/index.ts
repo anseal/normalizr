@@ -672,8 +672,14 @@ function logException(e: Error | undefined) {
 	console.log("\n<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<\n", e, "\n>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\n")
 }
 
+let __getId: any
+let __resetId: any
+export const setupParallelRun = (getId: any, resetId: any) => {
+	__getId = getId
+	__resetId = resetId	
+}
 
-export const normalize = (input: Input, schema: Schema, __getId?: any, __resetId?: any, circularDependencies = false) => {
+export const normalize = (input: Input, schema: Schema, circularDependencies = false) => {
 	console.log('::::::::::: normalize')
 	// console.log(schema)
 
