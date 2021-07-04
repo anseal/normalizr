@@ -1,5 +1,5 @@
 
-export type StrategyFunction = (value: Input, parent: Input, keyInParent: KeyInParent) => any
+export type StrategyFunction = (value: Input, parent: Input, keyInParent: KeyInParent, existingEntity: Input) => any
 export type SchemaFunction = (value: Input, parent: Input, keyInParent: KeyInParent) => string
 export type MergeFunction = (entityA: Input, entityB: Input) => any
 export type FallbackFunction = (key: string, schema: EntitySchema) => any
@@ -118,6 +118,24 @@ const defaultProcessStrategy = originalProcessStrategy
 
 const originalFallbackStrategy = (_key: Key, _schema: Schema) => undefined
 const defaultFallbackStrategy = originalFallbackStrategy
+
+export const strategy = {
+	noMerge: noMergeStrategy,
+	inplaceMerge: simpleMergeStrategy,
+	fullMerge: originalMergeStrategy,
+	inplaceProcess: inplaceProcessStrategy,
+	aggregateProcess: (input: Input, _parent: Input, _keyInParent: KeyInParent, existingEntity: Input) => {
+		return Object.assign(existingEntity || {}, input)
+	},
+	aggregateInplaceProcess: (input: Input, _parent: Input, _keyInParent: KeyInParent, existingEntity: Input) => {
+		if (existingEntity) {
+			return Object.assign(existingEntity, input)
+		}
+		return input
+	},
+	copyAndProcess: originalProcessStrategy,
+	noFallback: originalFallbackStrategy,
+}
 
 export const overrideDefaultsDuringMigration = (schema: DepricatedSchema, defaults: EntityOptions = {}) => {
 	defaults = {
@@ -273,7 +291,7 @@ class EntitySchema {
 		if(visited(input, entityType, id)) { return id }
 
 		// TODO: default Strategy - copy over existingEntity ?
-		const processedEntity = this._processStrategy(input, parent, keyInParent)
+		const processedEntity = this._processStrategy(input, parent, keyInParent, existingEntity)
 		for(const key in this.schema) {
 			// TODO: do we need this? all tests are passing
 			// it looks like optimizations... but in reality perf is dropping
