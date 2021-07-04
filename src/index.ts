@@ -331,7 +331,11 @@ class EntitySchema {
 
 		// TODO: remove after deprication process is complete
 		if (id === undefined) {
-			id = this._getId(input, parent, keyInParent)
+			id = this._getId(input, parent, keyInParent) // if a user adds `id` while mutating the `input`
+			// TODO: probable not needed, because v3.3.0 (which is my target) takes id from the `input` and not the `processedEntity`
+			// if(id === undefined) {
+			// 	id = this._getId(processedEntity, parent, keyInParent) // if a user adds `id` to the `processedEntity` without mutating the `input`
+			// }
 		}
 
 		if (existingEntity) {
