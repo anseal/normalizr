@@ -1,7 +1,7 @@
 // eslint-env jest
 import { denormalize, schema } from '../../'
 
-describe(`${schema.Union.name} denormalization`, () => {
+describe('UnionSchema denormalization', () => {
 	const user = new schema.Entity('users')
 	const group = new schema.Entity('groups')
 	const entities = {

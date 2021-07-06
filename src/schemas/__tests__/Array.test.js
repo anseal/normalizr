@@ -1,9 +1,9 @@
 // eslint-env jest
 import { normalize, schema } from '../../'
 
-describe(`${schema.Array.name} normalization`, () => {
+describe('ArraySchema normalization', () => {
 	describe('Object', () => {
-		test(`normalizes plain arrays as shorthand for ${schema.Array.name}`, () => {
+		test('normalizes plain arrays as shorthand for ArraySchema', () => {
 			const userSchema = new schema.Entity('user')
 			expect(normalize([{ id: 1 }, { id: 2 }], [userSchema])).toMatchSnapshot()
 		})

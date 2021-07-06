@@ -194,4 +194,31 @@ describe('normalize', () => {
 		expect(normalize(input, linkablesSchema)).toMatchSnapshot()
 	})
 */
+
+	// TODO: remove after deprication process is complete
+	test('works with ids generated in processStrategy (with input mutation)', () => {
+		let maxId = 0
+		const someSchema = new schema.Entity('something', {}, {
+			processStrategy: entity => {
+				entity.id = maxId++;
+				return entity;
+			},
+		});
+
+		expect(normalize([{ x: 'a' }, { y: 'b' }], [someSchema])).toEqual({ entities: { something: { "0": { id: 0, x: 'a' }, "1": { id: 1, y: 'b' } } }, result: [ 0, 1 ] })
+	})
+	// TODO: probable not needed, because v3.3.0 (which is my target) takes id from the `input` and not the `processedEntity`
+	// test('works with ids generated in processStrategy (without input mutation)', () => {
+	// 	let maxId = 0
+	// 	const someSchema = new schema.Entity('something', {}, {
+	// 		processStrategy: entity => {
+	// 			return {
+	// 				id: maxId++,
+	// 				...entity
+	// 			}
+	// 		},
+	// 	});
+
+	// 	expect(normalize([{ x: 'a' }, { y: 'b' }], [someSchema])).toEqual({ entities: { something: { "0": { id: 0, x: 'a' }, "1": { id: 1, y: 'b' } } }, result: [ 0, 1 ] })
+	// })
 })

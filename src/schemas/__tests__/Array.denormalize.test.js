@@ -1,7 +1,7 @@
 // eslint-env jest
 import { denormalize, normalize, schema } from '../../'
 
-describe(`${schema.Array.name} denormalization`, () => {
+describe('ArraySchema denormalization', () => {
 	describe('Object', () => {
 		test('denormalizes a single entity', () => {
 			expect(true).toBe(true)

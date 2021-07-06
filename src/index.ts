@@ -2,9 +2,7 @@ import * as original from './original.js'
 import { getCallFrames, clonePojoTree, clonePojoGraph, deepEqualSameShape, deepEqualWithJSON, deepEqualDiffShape } from './utils.js'
 import _ from 'lodash'
 
-// export { cloneWithJSON, clonePojoTree, deepEqualWithJSON, deepEqualSameShape } from './utils.js'
-
-export type StrategyFunction = (value: Input, parent: Input, keyInParent: KeyInParent) => any
+export type StrategyFunction = (value: Input, parent: Input, keyInParent: KeyInParent, existingEntity: Input, id: Key) => any
 export type SchemaFunction = (value: Input, parent: Input, keyInParent: KeyInParent) => string
 export type MergeFunction = (entityA: Input, entityB: Input) => any
 export type FallbackFunction = (key: string, schema: EntitySchema) => any
@@ -123,6 +121,24 @@ const defaultProcessStrategy = originalProcessStrategy
 
 const originalFallbackStrategy = (_key: Key, _schema: Schema) => undefined
 const defaultFallbackStrategy = originalFallbackStrategy
+
+export const strategy = {
+	noMerge: noMergeStrategy,
+	inplaceMerge: simpleMergeStrategy,
+	fullMerge: originalMergeStrategy,
+	inplaceProcess: inplaceProcessStrategy,
+	aggregateProcess: (input: Input, _parent: Input, _keyInParent: KeyInParent, existingEntity: Input) => {
+		return Object.assign(existingEntity || {}, input)
+	},
+	aggregateInplaceProcess: (input: Input, _parent: Input, _keyInParent: KeyInParent, existingEntity: Input) => {
+		if (existingEntity) {
+			return Object.assign(existingEntity, input)
+		}
+		return input
+	},
+	copyAndProcess: originalProcessStrategy,
+	noFallback: originalFallbackStrategy,
+}
 
 export const overrideDefaultsDuringMigration = (schema: DepricatedSchema, defaults: EntityOptions = {}) => {
 	defaults = {
@@ -289,7 +305,8 @@ class EntitySchema {
 		if (typeof input !== 'object' || input === null) {
 			return input
 		}
-		let id = this._getId(input, parent, keyInParent) // TODO: what if id === `undefined`?
+		let id = this._getId(input, parent, keyInParent)
+		// TODO: what if `id` is not unique?
 		// TODO: add after deprication process is complete... or maybe not
 		// if (id === undefined) {
 		// 	throw new Error('normalizr: `id` is required and setting it in `processStrategy` is depricated')
@@ -314,7 +331,7 @@ class EntitySchema {
 		if(visited(input, entityType, id)) { return id }
 
 		// TODO: default Strategy - copy over existingEntity ?
-		const processedEntity = this._processStrategy(input, parent, keyInParent)
+		const processedEntity = this._processStrategy(input, parent, keyInParent, existingEntity, id)
 		for(const key in this.schema) {
 			// TODO: do we need this? all tests are passing
 			// it looks like optimizations... but in reality perf is dropping
@@ -372,7 +389,11 @@ class EntitySchema {
 
 		// TODO: remove after deprication process is complete
 		if (id === undefined) {
-			id = this._getId(input, parent, keyInParent)
+			id = this._getId(input, parent, keyInParent) // if a user adds `id` while mutating the `input`
+			// TODO: probable not needed, because v3.3.0 (which is my target) takes id from the `input` and not the `processedEntity`
+			// if(id === undefined) {
+			// 	id = this._getId(processedEntity, parent, keyInParent) // if a user adds `id` to the `processedEntity` without mutating the `input`
+			// }
 		}
 
 		if (existingEntity) {

@@ -3,7 +3,7 @@ import { normalize, schema } from '../../'
 
 const values = (obj) => Object.keys(obj).map((key) => obj[key])
 
-describe(`${schema.Entity.name} normalization`, () => {
+describe('EntitySchema normalization', () => {
 	test('normalizes an entity', () => {
 		const entity = new schema.Entity('item')
 		expect(normalize({ id: 1 }, entity)).toMatchSnapshot()
