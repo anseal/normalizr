@@ -657,7 +657,9 @@ setTimeout(() => {
     logMismatch(a, ["just checking (old)"], ["just checking (new)"]);
     logException(["just checking (exceptions raw input)"], new Error('error 1'), new Error('error 2'));
 }, 10000);
+let calls_norm = 0;
 const normalize = (input, schema, circularDependencies = false) => {
+    fs.writeFileSync(`./normalizr-cnt-norm.log`, String(++calls_norm));
     console.log('::::::::::: normalize');
     // console.log(schema)
     const curId = __getId ? __getId() : 0;
@@ -716,11 +718,11 @@ const normalize = (input, schema, circularDependencies = false) => {
         // logException(e)
     }
     if (Boolean(excectionFromMine) !== Boolean(excectionFromOriginal)) {
-        console.log(schema);
+        console.log("normalizr: norm", schema);
         logException(input, excectionFromOriginal, excectionFromMine);
     }
     else if (utils_js_1.deepEqualDiffShape(originalResult, res) === false || lodash_1.default.isEqual(originalResult, res) === false) {
-        console.log(schema);
+        console.log("normalizr: norm", schema);
         logMismatch(input, originalResult, res);
     }
     if (excectionFromOriginal)
@@ -730,7 +732,9 @@ const normalize = (input, schema, circularDependencies = false) => {
     // return res
 };
 exports.normalize = normalize;
+let calls_denorm = 0;
 const denormalize = (input, schema, entities) => {
+    fs.writeFileSync(`./normalizr-cnt-denorm.log`, String(++calls_denorm));
     console.log('::::::::::: denormalize');
     // console.log(schema)
     // const inputClone = clonePojoGrpah(input)
@@ -801,11 +805,11 @@ const denormalize = (input, schema, entities) => {
         excectionFromMine = e;
     }
     if (Boolean(excectionFromMine) !== Boolean(excectionFromOriginal)) {
-        console.log(schema);
+        console.log("normalizr: denorm", schema);
         logException(input, excectionFromOriginal, excectionFromMine);
     }
     else if (utils_js_1.deepEqualDiffShape(originalResult, result) === false || lodash_1.default.isEqual(originalResult, result) === false) {
-        console.log(schema);
+        console.log("normalizr: denorm", schema);
         logMismatch(input, originalResult, result);
     }
     if (excectionFromOriginal)
