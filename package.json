@@ -40,6 +40,10 @@
 			"import": "./dist/esm/index.js"
 		}
 	},
+	"browser": {
+		"fs": false,
+		"perf_hooks": false
+	},
 	"sideEffects": false,
 	"scripts": {
 		"perf_tests_node": "npm run build && node ./dist/esm/perf_node.js",

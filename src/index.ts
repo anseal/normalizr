@@ -1,7 +1,6 @@
 import * as original from './original.js'
-import { getCallFrames, clonePojoTree, clonePojoGraph, deepEqualSameShape, deepEqualWithJSON, deepEqualDiffShape } from './utils.js'
+import { getCallFrames, clonePojoTree, clonePojoGraph, clonePojoGraphAndSortProps, deepEqualSameShape, deepEqualWithJSON, deepEqualDiffShape } from './utils.js'
 import _ from 'lodash'
-import fs from 'fs'
 
 export type StrategyFunction = (value: Input, parent: Input, keyInParent: KeyInParent, existingEntity: Input, id: Key) => any
 export type SchemaFunction = (value: Input, parent: Input, keyInParent: KeyInParent) => string
@@ -684,41 +683,63 @@ export const schema = {
 // 	entities: Collections,
 // }
 
+let __getId: any
+let __resetId: any
+let fs: any = { writeFileSync: (_file: string, data: string) => console.log(_file, data) }
+export const setupParallelRun = (getId: any, resetId: any, _fs: any) => {
+	__getId = getId
+	__resetId = resetId
+	fs = _fs && _fs.writeFileSync ? _fs : fs
+}
+
 let fileNum = 0
 function logMismatch(rawRes: any, oldRes: any, newRes: any) {
 	++fileNum
 	try {
 		const loc = String(new Error('normalizr: mismatch with the original').stack)
 		fs.writeFileSync(`./normalizr-${fileNum}-loc.log`, loc)
-		fs.writeFileSync(`./normalizr-${fileNum}-raw.log`, JSON.stringify(rawRes))
-		fs.writeFileSync(`./normalizr-${fileNum}-old.log`, JSON.stringify(oldRes))
-		fs.writeFileSync(`./normalizr-${fileNum}-new.log`, JSON.stringify(newRes))
 	} catch(e) {
-		console.error('normalizr: oops', e, rawRes, oldRes, newRes)
+		console.error('normalizr: oops - can`t write log', e, rawRes, oldRes, newRes)
+		process.exit(111)
+	}
+	try {
+		fs.writeFileSync(`./normalizr-${fileNum}-raw.log`, JSON.stringify(rawRes, undefined, '\t'))
+	} catch(e) {
+		console.error(`normalizr: oops (raw ${fileNum})`, e, rawRes)
+	}
+	try {
+		fs.writeFileSync(`./normalizr-${fileNum}-old.log`, JSON.stringify(clonePojoGraphAndSortProps(oldRes), undefined, '\t'))
+	} catch(e) {
+		console.error(`normalizr: oops (old ${fileNum})`, e, oldRes)
+	}
+	try {
+		fs.writeFileSync(`./normalizr-${fileNum}-new.log`, JSON.stringify(clonePojoGraphAndSortProps(newRes), undefined, '\t'))
+	} catch(e) {
+		console.error(`normalizr: oops (new ${fileNum})`, e, newRes)
 	}
 }
 function logException(rawRes: any, oldException: Error | undefined, newException: Error | undefined) {
 	++fileNum
 	try {
 		fs.writeFileSync(`./normalizr-${fileNum}-exception.log`, String(oldException && oldException.stack) + '\n----------------\n' + String(newException && newException.stack))
-		fs.writeFileSync(`./normalizr-${fileNum}-raw.log`, JSON.stringify(rawRes))
+	} catch(e) {
+		console.error('normalizr: oops - can`t write log', e, rawRes, oldException, newException)
+		process.exit(111)
+	}
+	try {
+		fs.writeFileSync(`./normalizr-${fileNum}-raw.log`, JSON.stringify(rawRes, undefined, '\t'))
 	} catch(e) {
 		console.error('normalizr: oops', e, rawRes, oldException, newException)
 	}
 }
 
-logMismatch(["just checking (raw)"],["just checking (old)"],["just checking (new)"])
-const a: any = []
-a.push(a)
-logMismatch(a,["just checking (old)"],["just checking (new)"])
-logException(["just checking (exceptions raw input)"], new Error('error 1'), new Error('error 2'))
-
-let __getId: any
-let __resetId: any
-export const setupParallelRun = (getId: any, resetId: any) => {
-	__getId = getId
-	__resetId = resetId	
-}
+setTimeout(() => {
+	logMismatch(["just checking (raw)"],["just checking (old)"],["just checking (new)"])
+	const a: any = []
+	a.push(a)
+	logMismatch(a,["just checking (old)"],["just checking (new)"])
+	logException(["just checking (exceptions raw input)"], new Error('error 1'), new Error('error 2'))
+}, 10000)
 
 export const normalize = (input: Input, schema: Schema, circularDependencies = false) => {
 	console.log('::::::::::: normalize')

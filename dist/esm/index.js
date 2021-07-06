@@ -1,7 +1,6 @@
 import * as original from './original.js';
-import { getCallFrames, deepEqualDiffShape } from './utils.js';
+import { getCallFrames, clonePojoGraphAndSortProps, deepEqualDiffShape } from './utils.js';
 import _ from 'lodash';
-import fs from 'fs';
 const compileSchema = (schema) => {
     if (schema === undefined || schema === null) {
         console.warn("Nil schemas are depricated.");
@@ -570,41 +569,67 @@ export const schema = {
 // 	result: Result,
 // 	entities: Collections,
 // }
+let __getId;
+let __resetId;
+let fs = { writeFileSync: (_file, data) => console.log(_file, data) };
+export const setupParallelRun = (getId, resetId, _fs) => {
+    __getId = getId;
+    __resetId = resetId;
+    fs = _fs && _fs.writeFileSync ? _fs : fs;
+};
 let fileNum = 0;
 function logMismatch(rawRes, oldRes, newRes) {
     ++fileNum;
     try {
         const loc = String(new Error('normalizr: mismatch with the original').stack);
         fs.writeFileSync(`./normalizr-${fileNum}-loc.log`, loc);
-        fs.writeFileSync(`./normalizr-${fileNum}-raw.log`, JSON.stringify(rawRes));
-        fs.writeFileSync(`./normalizr-${fileNum}-old.log`, JSON.stringify(oldRes));
-        fs.writeFileSync(`./normalizr-${fileNum}-new.log`, JSON.stringify(newRes));
     }
     catch (e) {
-        console.error('normalizr: oops', e, rawRes, oldRes, newRes);
+        console.error('normalizr: oops - can`t write log', e, rawRes, oldRes, newRes);
+        process.exit(111);
+    }
+    try {
+        fs.writeFileSync(`./normalizr-${fileNum}-raw.log`, JSON.stringify(rawRes, undefined, '\t'));
+    }
+    catch (e) {
+        console.error(`normalizr: oops (raw ${fileNum})`, e, rawRes);
+    }
+    try {
+        fs.writeFileSync(`./normalizr-${fileNum}-old.log`, JSON.stringify(clonePojoGraphAndSortProps(oldRes), undefined, '\t'));
+    }
+    catch (e) {
+        console.error(`normalizr: oops (old ${fileNum})`, e, oldRes);
+    }
+    try {
+        fs.writeFileSync(`./normalizr-${fileNum}-new.log`, JSON.stringify(clonePojoGraphAndSortProps(newRes), undefined, '\t'));
+    }
+    catch (e) {
+        console.error(`normalizr: oops (new ${fileNum})`, e, newRes);
     }
 }
 function logException(rawRes, oldException, newException) {
     ++fileNum;
     try {
         fs.writeFileSync(`./normalizr-${fileNum}-exception.log`, String(oldException && oldException.stack) + '\n----------------\n' + String(newException && newException.stack));
-        fs.writeFileSync(`./normalizr-${fileNum}-raw.log`, JSON.stringify(rawRes));
+    }
+    catch (e) {
+        console.error('normalizr: oops - can`t write log', e, rawRes, oldException, newException);
+        process.exit(111);
+    }
+    try {
+        fs.writeFileSync(`./normalizr-${fileNum}-raw.log`, JSON.stringify(rawRes, undefined, '\t'));
     }
     catch (e) {
         console.error('normalizr: oops', e, rawRes, oldException, newException);
     }
 }
-logMismatch(["just checking (raw)"], ["just checking (old)"], ["just checking (new)"]);
-const a = [];
-a.push(a);
-logMismatch(a, ["just checking (old)"], ["just checking (new)"]);
-logException(["just checking (exceptions raw input)"], new Error('error 1'), new Error('error 2'));
-let __getId;
-let __resetId;
-export const setupParallelRun = (getId, resetId) => {
-    __getId = getId;
-    __resetId = resetId;
-};
+setTimeout(() => {
+    logMismatch(["just checking (raw)"], ["just checking (old)"], ["just checking (new)"]);
+    const a = [];
+    a.push(a);
+    logMismatch(a, ["just checking (old)"], ["just checking (new)"]);
+    logException(["just checking (exceptions raw input)"], new Error('error 1'), new Error('error 2'));
+}, 10000);
 export const normalize = (input, schema, circularDependencies = false) => {
     console.log('::::::::::: normalize');
     // console.log(schema)

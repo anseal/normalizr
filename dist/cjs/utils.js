@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.getCallFrames = exports.deepEqualDiffShape = exports.deepEqualSameShape = exports.clonePojoGraph = exports.clonePojoTree = exports.deepEqualWithJSON = exports.cloneWithJSON = void 0;
+exports.getCallFrames = exports.deepEqualDiffShape = exports.deepEqualSameShape = exports.clonePojoGraphAndSortProps = exports.clonePojoGraph = exports.clonePojoTree = exports.deepEqualWithJSON = exports.cloneWithJSON = void 0;
 function cloneWithJSON(data) {
     return JSON.parse(JSON.stringify(data));
 }
@@ -51,6 +51,33 @@ function clonePojoGraph(data, cache = new Map()) {
     }
 }
 exports.clonePojoGraph = clonePojoGraph;
+function clonePojoGraphAndSortProps(data, cache = new Map()) {
+    if (typeof data !== 'object' || data === null) {
+        return data;
+    }
+    const cached = cache.get(data);
+    if (cached) {
+        return cached;
+    }
+    if (Array.isArray(data)) {
+        const res = new Array(data.length);
+        cache.set(data, res);
+        for (let i = 0; i !== data.length; ++i) {
+            res[i] = clonePojoGraphAndSortProps(data[i], cache);
+        }
+        return res;
+    }
+    else {
+        const res = Object.create(Object.getPrototypeOf(data));
+        cache.set(data, res);
+        const keys = Object.keys(data).sort();
+        for (const key of keys) {
+            res[key] = clonePojoGraphAndSortProps(data[key], cache);
+        }
+        return res;
+    }
+}
+exports.clonePojoGraphAndSortProps = clonePojoGraphAndSortProps;
 function deepEqualSameShape(data1, data2) {
     if (Array.isArray(data1)) {
         if (Array.isArray(data2) === false) {
@@ -134,6 +161,46 @@ function deepEqualDiffShape(data1, data2) {
     return data1 === data2 || Number.isNaN(data1) === Number.isNaN(data2);
 }
 exports.deepEqualDiffShape = deepEqualDiffShape;
+/*
+export function getDiffAndSortProps(data1: any, data2: any): any {
+    if( Array.isArray(data1) ) {
+        if( Array.isArray(data2) === false ) {
+            return `typeof ${typeof data1} != ${typeof data2}`
+        }
+        if( data1.length !== data2.length ) {
+            return `length ${data1.length} != ${data2.length}`
+        }
+        for( let i = 0 ; i !== data1.length ; ++i ) {
+            if( deepEqualDiffShape(data1[i], data2[i]) !== undefined ) {
+                return [ i: ]
+            }
+        }
+        return true
+    }
+    if( typeof data1 === 'object' ) {
+        if( typeof data2 !== 'object' ) {
+            return false
+        }
+        if( data1 === null ) {
+            if( data2 !== null ) {
+                return false
+            }
+            return true
+        }
+
+        const keys1 = Object.keys(data1)
+        const keys2 = Object.keys(data2)
+        if( keys1.length !== keys2.length ) return false
+        for(const key of keys1) {
+            if( deepEqualDiffShape(data1[key], data2[key]) === false ) {
+                return false
+            }
+        }
+        return true
+    }
+    return data1 === data2 || Number.isNaN(data1) === Number.isNaN(data2)
+}
+*/
 function getCallFrames(exclude) {
     const stack = new Error("").stack;
     if (!stack)
