@@ -1,6 +1,7 @@
 import * as original from './original.js'
 import { getCallFrames, clonePojoTree, clonePojoGraph, deepEqualSameShape, deepEqualWithJSON, deepEqualDiffShape } from './utils.js'
 import _ from 'lodash'
+import fs from 'fs'
 
 export type StrategyFunction = (value: Input, parent: Input, keyInParent: KeyInParent, existingEntity: Input, id: Key) => any
 export type SchemaFunction = (value: Input, parent: Input, keyInParent: KeyInParent) => string
@@ -683,24 +684,27 @@ export const schema = {
 // 	entities: Collections,
 // }
 
-function logError(msg: string, objs: [string,any][]) {
-	console.log(
-		"!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n",
-		"!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n",
-		"!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n",
-		new Error(msg),
-		objs.map(([name,obj]) => [
-			"---------------------------------------",
-			name,
-			JSON.stringify(obj)
-		]).flat().join('\n'),
-		"!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n",
-		"!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n",
-		"!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n",
-	)
+let fileNum = 0
+function logMismatch(rawRes: any, oldRes: any, newRes: any) {
+	++fileNum
+	try {
+		const loc = String(new Error('normalizr: mismatch with the original').stack)
+		fs.writeFileSync(`./normalizr-${fileNum}-loc.log`, loc)
+		fs.writeFileSync(`./normalizr-${fileNum}-raw.log`, JSON.stringify(rawRes))
+		fs.writeFileSync(`./normalizr-${fileNum}-old.log`, JSON.stringify(oldRes))
+		fs.writeFileSync(`./normalizr-${fileNum}-new.log`, JSON.stringify(newRes))
+	} catch(e) {
+		console.error('normalizr: oops', e, rawRes, oldRes, newRes)
+	}
 }
-function logException(e: Error | undefined) {
-	console.log("\n<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<\n", e, "\n>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\n")
+function logException(rawRes: any, oldException: Error | undefined, newException: Error | undefined) {
+	++fileNum
+	try {
+		fs.writeFileSync(`./normalizr-${fileNum}-exception.log`, String(oldException && oldException.stack) + '\n----------------\n' + String(newException && newException.stack))
+		fs.writeFileSync(`./normalizr-${fileNum}-raw.log`, JSON.stringify(rawRes))
+	} catch(e) {
+		console.error('normalizr: oops', e, rawRes, oldException, newException)
+	}
 }
 
 let __getId: any
@@ -781,11 +785,10 @@ export const normalize = (input: Input, schema: Schema, circularDependencies = f
 	}
 	if( Boolean(excectionFromMine) !== Boolean(excectionFromOriginal) ) {
 		console.log(schema)
-		logException(excectionFromMine)
-		logException(excectionFromOriginal)
+		logException(input, excectionFromOriginal, excectionFromMine)
 	} else if( deepEqualDiffShape(originalResult, res) === false || _.isEqual(originalResult, res) === false ) {
 		console.log(schema)
-		logError("normalizr: mismatch with the original", [["input", input], ["originalResult", originalResult], ["result", res]])
+		logMismatch(input, originalResult, res)
 	}
 	if( excectionFromOriginal ) throw excectionFromOriginal
 	// if( excectionFromMine ) throw excectionFromMine
@@ -877,11 +880,10 @@ export const denormalize = (input: Input, schema: Schema, entities: Entities) =>
 	}
 	if( Boolean(excectionFromMine) !== Boolean(excectionFromOriginal) ) {
 		console.log(schema)
-		logException(excectionFromMine)
-		logException(excectionFromOriginal)
+		logException(input, excectionFromOriginal, excectionFromMine)
 	} else if( deepEqualDiffShape(originalResult, result) === false || _.isEqual(originalResult, result) === false ) {
 		console.log(schema)
-		logError("normalizr: mismatch with the original", [["input", input], ["originalResult", originalResult], ["result", result]])
+		logMismatch(input, originalResult, result)
 	}
 	if( excectionFromOriginal ) throw excectionFromOriginal
 	// if( excectionFromMine ) throw excectionFromMine

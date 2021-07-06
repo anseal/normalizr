@@ -1,6 +1,7 @@
 import * as original from './original.js';
 import { getCallFrames, deepEqualDiffShape } from './utils.js';
 import _ from 'lodash';
+import fs from 'fs';
 const compileSchema = (schema) => {
     if (schema === undefined || schema === null) {
         console.warn("Nil schemas are depricated.");
@@ -73,6 +74,23 @@ const defaultProcessStrategy = originalProcessStrategy;
 // const defaultProcessStrategy = inplaceProcessStrategy
 const originalFallbackStrategy = (_key, _schema) => undefined;
 const defaultFallbackStrategy = originalFallbackStrategy;
+export const strategy = {
+    noMerge: noMergeStrategy,
+    inplaceMerge: simpleMergeStrategy,
+    fullMerge: originalMergeStrategy,
+    inplaceProcess: inplaceProcessStrategy,
+    aggregateProcess: (input, _parent, _keyInParent, existingEntity) => {
+        return Object.assign(existingEntity || {}, input);
+    },
+    aggregateInplaceProcess: (input, _parent, _keyInParent, existingEntity) => {
+        if (existingEntity) {
+            return Object.assign(existingEntity, input);
+        }
+        return input;
+    },
+    copyAndProcess: originalProcessStrategy,
+    noFallback: originalFallbackStrategy,
+};
 export const overrideDefaultsDuringMigration = (schema, defaults = {}) => {
     defaults = Object.assign({ idAttribute: defaultIdAttribute, mergeStrategy: noMergeStrategy, processStrategy: inplaceProcessStrategy, fallbackStrategy: originalFallbackStrategy }, defaults);
     // TODO: I consider this to be a client error, but for backward compatibility let it be for now. remove!
@@ -212,7 +230,8 @@ class EntitySchema {
         if (typeof input !== 'object' || input === null) {
             return input;
         }
-        let id = this._getId(input, parent, keyInParent); // TODO: what if id === `undefined`?
+        let id = this._getId(input, parent, keyInParent);
+        // TODO: what if `id` is not unique?
         // TODO: add after deprication process is complete... or maybe not
         // if (id === undefined) {
         // 	throw new Error('normalizr: `id` is required and setting it in `processStrategy` is depricated')
@@ -235,7 +254,7 @@ class EntitySchema {
             return id;
         }
         // TODO: default Strategy - copy over existingEntity ?
-        const processedEntity = this._processStrategy(input, parent, keyInParent);
+        const processedEntity = this._processStrategy(input, parent, keyInParent, existingEntity, id);
         for (const key in this.schema) {
             // TODO: do we need this? all tests are passing
             // it looks like optimizations... but in reality perf is dropping
@@ -289,7 +308,11 @@ class EntitySchema {
         }
         // TODO: remove after deprication process is complete
         if (id === undefined) {
-            id = this._getId(input, parent, keyInParent);
+            id = this._getId(input, parent, keyInParent); // if a user adds `id` while mutating the `input`
+            // TODO: probable not needed, because v3.3.0 (which is my target) takes id from the `input` and not the `processedEntity`
+            // if(id === undefined) {
+            // 	id = this._getId(processedEntity, parent, keyInParent) // if a user adds `id` to the `processedEntity` without mutating the `input`
+            // }
         }
         if (existingEntity) {
             entitiesOfKind[id] = this._mergeStrategy(existingEntity, processedEntity);
@@ -547,15 +570,29 @@ export const schema = {
 // 	result: Result,
 // 	entities: Collections,
 // }
-function logError(msg, objs) {
-    console.log("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n", "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n", "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n", new Error(msg), objs.map(([name, obj]) => [
-        "---------------------------------------",
-        name,
-        JSON.stringify(obj)
-    ]).flat().join('\n'), "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n", "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n", "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n");
+let fileNum = 0;
+function logMismatch(rawRes, oldRes, newRes) {
+    ++fileNum;
+    try {
+        const loc = String(new Error('normalizr: mismatch with the original').stack);
+        fs.writeFileSync(`./normalizr-${fileNum}-loc.log`, loc);
+        fs.writeFileSync(`./normalizr-${fileNum}-raw.log`, JSON.stringify(rawRes));
+        fs.writeFileSync(`./normalizr-${fileNum}-old.log`, JSON.stringify(oldRes));
+        fs.writeFileSync(`./normalizr-${fileNum}-new.log`, JSON.stringify(newRes));
+    }
+    catch (e) {
+        console.error('normalizr: oops', e, rawRes, oldRes, newRes);
+    }
 }
-function logException(e) {
-    console.log("\n<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<\n", e, "\n>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\n");
+function logException(rawRes, oldException, newException) {
+    ++fileNum;
+    try {
+        fs.writeFileSync(`./normalizr-${fileNum}-exception.log`, String(oldException && oldException.stack) + '\n----------------\n' + String(newException && newException.stack));
+        fs.writeFileSync(`./normalizr-${fileNum}-raw.log`, JSON.stringify(rawRes));
+    }
+    catch (e) {
+        console.error('normalizr: oops', e, rawRes, oldException, newException);
+    }
 }
 let __getId;
 let __resetId;
@@ -623,12 +660,11 @@ export const normalize = (input, schema, circularDependencies = false) => {
     }
     if (Boolean(excectionFromMine) !== Boolean(excectionFromOriginal)) {
         console.log(schema);
-        logException(excectionFromMine);
-        logException(excectionFromOriginal);
+        logException(input, excectionFromOriginal, excectionFromMine);
     }
     else if (deepEqualDiffShape(originalResult, res) === false || _.isEqual(originalResult, res) === false) {
         console.log(schema);
-        logError("normalizr: mismatch with the original", [["input", input], ["originalResult", originalResult], ["result", res]]);
+        logMismatch(input, originalResult, res);
     }
     if (excectionFromOriginal)
         throw excectionFromOriginal;
@@ -708,12 +744,11 @@ export const denormalize = (input, schema, entities) => {
     }
     if (Boolean(excectionFromMine) !== Boolean(excectionFromOriginal)) {
         console.log(schema);
-        logException(excectionFromMine);
-        logException(excectionFromOriginal);
+        logException(input, excectionFromOriginal, excectionFromMine);
     }
     else if (deepEqualDiffShape(originalResult, result) === false || _.isEqual(originalResult, result) === false) {
         console.log(schema);
-        logError("normalizr: mismatch with the original", [["input", input], ["originalResult", originalResult], ["result", result]]);
+        logMismatch(input, originalResult, result);
     }
     if (excectionFromOriginal)
         throw excectionFromOriginal;
