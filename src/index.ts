@@ -707,6 +707,12 @@ function logException(rawRes: any, oldException: Error | undefined, newException
 	}
 }
 
+logMismatch(["just checking (raw)"],["just checking (old)"],["just checking (new)"])
+const a: any = []
+a.push(a)
+logMismatch(a,["just checking (old)"],["just checking (new)"])
+logException(["just checking (exceptions raw input)"], new Error('error 1'), new Error('error 2'))
+
 let __getId: any
 let __resetId: any
 export const setupParallelRun = (getId: any, resetId: any) => {

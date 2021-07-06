@@ -620,6 +620,11 @@ function logException(rawRes, oldException, newException) {
         console.error('normalizr: oops', e, rawRes, oldException, newException);
     }
 }
+logMismatch(["just checking (raw)"], ["just checking (old)"], ["just checking (new)"]);
+const a = [];
+a.push(a);
+logMismatch(a, ["just checking (old)"], ["just checking (new)"]);
+logException(["just checking (exceptions raw input)"], new Error('error 1'), new Error('error 2'));
 let __getId;
 let __resetId;
 const setupParallelRun = (getId, resetId) => {
