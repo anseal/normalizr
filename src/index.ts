@@ -1,5 +1,5 @@
 
-export type StrategyFunction = (value: Input, parent: Input, keyInParent: KeyInParent, existingEntity: Input) => any
+export type StrategyFunction = (value: Input, parent: Input, keyInParent: KeyInParent, existingEntity: Input, id: Key) => any
 export type SchemaFunction = (value: Input, parent: Input, keyInParent: KeyInParent) => string
 export type MergeFunction = (entityA: Input, entityB: Input) => any
 export type FallbackFunction = (key: string, schema: EntitySchema) => any
@@ -291,7 +291,7 @@ class EntitySchema {
 		if(visited(input, entityType, id)) { return id }
 
 		// TODO: default Strategy - copy over existingEntity ?
-		const processedEntity = this._processStrategy(input, parent, keyInParent, existingEntity)
+		const processedEntity = this._processStrategy(input, parent, keyInParent, existingEntity, id)
 		for(const key in this.schema) {
 			// TODO: do we need this? all tests are passing
 			// it looks like optimizations... but in reality perf is dropping
