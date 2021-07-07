@@ -13,7 +13,6 @@ export type PlainObjectSchema = {
 export type CompiledPlainObjectSchema = {
 	[key: string] : CompiledSchema //| ((input: Input) => CompiledSchema)
 }
-export type CompiledSchema = EntitySchema | ArraySchema | ValuesSchema | UnionSchema | ObjectSchema
 export type Schema = SingularArraySchema | PlainObjectSchema | CompiledSchema
 export type DepricatedSchema = Schema | undefined
 export interface ISchema {
@@ -44,14 +43,7 @@ const compileSchema = (schema: Schema): CompiledSchema => {
 		// @ts-ignore // TODO: remove? some TS versions (4.2.4?) do not understand that `schema` is actually `never` in here
 		return schema
 	}
-	// TODO: looks like monkey-patching
-	if (
-		schema instanceof EntitySchema ||
-		schema instanceof ValuesSchema ||
-		schema instanceof ArraySchema ||
-		schema instanceof ObjectSchema ||
-		schema instanceof UnionSchema
-	) {
+	if( schema instanceof CompiledSchema ) {
 		return schema
 	}
 	if( Array.isArray(schema) ) {
@@ -137,7 +129,7 @@ export const strategy = {
 	noFallback: originalFallbackStrategy,
 }
 
-export const overrideDefaultsDuringMigration = (schema: DepricatedSchema, defaults: EntityOptions = {}) => {
+export const overrideDefaultsDuringMigration = (schema: DepricatedSchema, defaults: EntityOptions = {}, replacements: Map<CompiledSchema, CompiledSchema> = new Map()) => {
 	defaults = {
 		idAttribute: defaultIdAttribute,
 		mergeStrategy: noMergeStrategy,
@@ -149,71 +141,64 @@ export const overrideDefaultsDuringMigration = (schema: DepricatedSchema, defaul
 	if( !schema ) {
 		throw new Error("Nil schemas are depricated.")
 	}
-	return _overrideDefaultsDuringMigration(compileSchema(schema), defaults, new Map())
+	return _overrideDefaultsDuringMigration(compileSchema(schema), defaults, replacements, new Map())
 }
 
-const _overrideDefaultsDuringMigration = (schema: CompiledSchema | CompiledPlainObjectSchema, defaults: EntityOptions, visitedSchemaElements: Map<CompiledSchema | CompiledPlainObjectSchema,CompiledSchema | CompiledPlainObjectSchema>): CompiledSchema | CompiledPlainObjectSchema=> {
+const _overrideDefaultsDuringMigration = (schema: CompiledSchema, defaults: EntityOptions, replacements: Map<CompiledSchema, CompiledSchema>, visitedSchemaElements: Map<CompiledSchema, CompiledSchema>): CompiledSchema => {
 	if( !schema ) {
 		console.warn("Nil schemas are depricated.")
 		return schema
 	}
 	const cachedSchema = visitedSchemaElements.get(schema)
 	if( cachedSchema !== undefined ) { return cachedSchema }
-	const newSchema: CompiledSchema | CompiledPlainObjectSchema = Object.create(Object.getPrototypeOf(schema))
+	const replacement = replacements.get(schema)
+	const newSchema: CompiledSchema = Object.create(Object.getPrototypeOf(replacement || schema))
 	Object.assign(newSchema, schema)
 	visitedSchemaElements.set(schema, newSchema)
 
-	if(
-		schema instanceof ArraySchema ||
-		schema instanceof UnionSchema ||
-		schema instanceof ValuesSchema
-	) {
-		const newSubSchema = _overrideDefaultsDuringMigration(schema.schema, defaults, visitedSchemaElements)
+	if( schema.schema instanceof CompiledSchema ) {
+		const newSubSchema = _overrideDefaultsDuringMigration(schema.schema, defaults, replacements, visitedSchemaElements)
 		// TODO: I consider this to be a client error, but for backward compatibility let it be for now. remove!
 		if( !newSubSchema ) {
 			throw new Error("Nil schemas are depricated.")
 		}
 		newSchema.schema = newSubSchema
-	} else if( schema instanceof ObjectSchema ) {
-		for(const key in schema.schema) {
-			const newSubSchema = _overrideDefaultsDuringMigration(schema.schema[key], defaults, visitedSchemaElements)
-			// TODO: I consider this to be a client error, but for backward compatibility let it be for now. remove!
-			if( !newSubSchema ) {
-				console.warn("Nil schemas are depricated.")
-				continue
-			}
-			(newSchema.schema as CompiledPlainObjectSchema)[key] = newSubSchema as CompiledSchema
-		}
-	} else if( schema instanceof EntitySchema ) {
-		const _newSchema = newSchema as EntitySchema
-		_newSchema.__id = _newSchema.__id + "*" // TODO: for debugging purposes. remove?
-		const override = (prop: keyof EntityOptions, defaultValue: any) => {
-			if( (schema as any)[`_${prop}`] === defaultValue ) {
-				(newSchema as any)[`_${prop}`] = defaults[prop]
-			} else {
-				(newSchema as any)[`_${prop}`] = (schema as any)[`_${prop}`]
-			}
-		}
-		override('idAttribute', defaultIdAttribute)
-		override('mergeStrategy', defaultMergeStrategy)
-		override('processStrategy', defaultProcessStrategy)
-		override('fallbackStrategy', defaultFallbackStrategy)
-		for(const key in schema.schema) {
-			const newSubSchema = _overrideDefaultsDuringMigration(schema.schema[key], defaults, visitedSchemaElements)
-			// TODO: I consider this to be a client error, but for backward compatibility let it be for now. remove!
-			if( !newSubSchema ) {
-				console.warn("Nil schemas are depricated.")
-				continue
-			}
-			(newSchema.schema as CompiledPlainObjectSchema)[key] = newSubSchema as CompiledSchema
-		}
 	} else {
-		throw new Error('Uexpected schema element')
+		for(const key in schema.schema) {
+			const newSubSchema = _overrideDefaultsDuringMigration(schema.schema[key], defaults, replacements, visitedSchemaElements)
+			// TODO: I consider this to be a client error, but for backward compatibility let it be for now. remove!
+			if( !newSubSchema ) {
+				console.warn("Nil schemas are depricated.")
+				continue
+			}
+			(newSchema.schema as CompiledPlainObjectSchema)[key] = newSubSchema
+		}
+		if( schema instanceof EntitySchema ) {
+			const _newSchema = newSchema as EntitySchema
+			_newSchema.__id = _newSchema.__id + "*" // TODO: for debugging purposes. remove?
+			const override = (prop: keyof EntityOptions, defaultValue: any) => {
+				if( (schema as any)[`_${prop}`] === defaultValue ) {
+					(newSchema as any)[`_${prop}`] = defaults[prop]
+				} else {
+					(newSchema as any)[`_${prop}`] = (schema as any)[`_${prop}`]
+				}
+			}
+			override('idAttribute', defaultIdAttribute)
+			override('mergeStrategy', defaultMergeStrategy)
+			override('processStrategy', defaultProcessStrategy)
+			override('fallbackStrategy', defaultFallbackStrategy)
+		}
 	}
+
 	return newSchema
 }
 
-class EntitySchema {
+abstract class CompiledSchema {
+	abstract schema: CompiledSchema | CompiledPlainObjectSchema
+	abstract normalize(input: Input, parent: Input, keyInParent: KeyInParent, entities: Entities, visited: Visited): Output
+	abstract denormalize(input: Input, unvisit: Unvisit): Output
+}
+class EntitySchema extends CompiledSchema {
 	__id: string | number = maxId++ // TODO: for debugging purposes. remove?
 	_key: string
 	_getId: SchemaFunction
@@ -224,6 +209,7 @@ class EntitySchema {
 	schema: CompiledPlainObjectSchema = {}
 
 	constructor(key: Key, definition: PlainObjectSchema = {}, options: EntityOptions = {}) {
+		super()
 		if (!key || typeof key !== 'string') {
 			throw new Error(`Expected a string key for Entity, but found ${key}.`)
 		}
@@ -375,10 +361,11 @@ class EntitySchema {
 	}
 }
 
-class ObjectSchema {
+class ObjectSchema extends CompiledSchema {
 	schema: CompiledPlainObjectSchema = {}
 
 	constructor(definition: PlainObjectSchema) {
+		super()
 		this.define(definition)
 	}
 
@@ -430,12 +417,13 @@ class ObjectSchema {
 	}
 }
 
-class PolymorphicSchema {
+abstract class PolymorphicSchema extends CompiledSchema {
 	_schemaAttribute: SchemaAttribute | undefined // TODO: | Key
 	_normalizeValue: NormalizeValue
 	schema: CompiledSchema | CompiledPlainObjectSchema = {}
 
 	constructor(definition: Schema, schemaAttribute?: SchemaValueFunction) {
+		super()
 		this._schemaAttribute = undefined
 		if (schemaAttribute) {
 			this._schemaAttribute = typeof schemaAttribute === 'string' ? (input: Input) => input[schemaAttribute] : schemaAttribute
@@ -448,13 +436,7 @@ class PolymorphicSchema {
 
 	define(definition: Schema) {
 		if( this._schemaAttribute !== undefined ) {
-			if(
-				definition instanceof EntitySchema ||
-				definition instanceof ArraySchema ||
-				definition instanceof ObjectSchema ||
-				definition instanceof ValuesSchema ||
-				definition instanceof UnionSchema
-			) {
+			if( definition instanceof CompiledSchema ) {
 				this.schema = definition
 			} else {
 				if( Array.isArray(definition) ) {
