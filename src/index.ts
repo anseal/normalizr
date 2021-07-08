@@ -700,7 +700,6 @@ function logMismatch(rawRes: any, oldRes: any, newRes: any) {
 		fs.writeFileSync(`./normalizr-${fileNum}-loc.log`, loc)
 	} catch(e) {
 		console.error('normalizr: oops - can`t write log', e, rawRes, oldRes, newRes)
-		process.exit(111)
 	}
 	try {
 		fs.writeFileSync(`./normalizr-${fileNum}-raw.log`, JSON.stringify(rawRes, undefined, '\t'))
@@ -724,7 +723,6 @@ function logException(rawRes: any, oldException: Error | undefined, newException
 		fs.writeFileSync(`./normalizr-${fileNum}-exception.log`, String(oldException && oldException.stack) + '\n----------------\n' + String(newException && newException.stack))
 	} catch(e) {
 		console.error('normalizr: oops - can`t write log', e, rawRes, oldException, newException)
-		process.exit(111)
 	}
 	try {
 		fs.writeFileSync(`./normalizr-${fileNum}-raw.log`, JSON.stringify(rawRes, undefined, '\t'))
@@ -732,14 +730,6 @@ function logException(rawRes: any, oldException: Error | undefined, newException
 		console.error('normalizr: oops', e, rawRes, oldException, newException)
 	}
 }
-
-setTimeout(() => {
-	logMismatch(["just checking (raw)"],["just checking (old)"],["just checking (new)"])
-	const a: any = []
-	a.push(a)
-	logMismatch(a,["just checking (old)"],["just checking (new)"])
-	logException(["just checking (exceptions raw input)"], new Error('error 1'), new Error('error 2'))
-}, 10000)
 
 let calls_norm = 0
 

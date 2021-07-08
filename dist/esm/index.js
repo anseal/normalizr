@@ -586,7 +586,6 @@ function logMismatch(rawRes, oldRes, newRes) {
     }
     catch (e) {
         console.error('normalizr: oops - can`t write log', e, rawRes, oldRes, newRes);
-        process.exit(111);
     }
     try {
         fs.writeFileSync(`./normalizr-${fileNum}-raw.log`, JSON.stringify(rawRes, undefined, '\t'));
@@ -614,7 +613,6 @@ function logException(rawRes, oldException, newException) {
     }
     catch (e) {
         console.error('normalizr: oops - can`t write log', e, rawRes, oldException, newException);
-        process.exit(111);
     }
     try {
         fs.writeFileSync(`./normalizr-${fileNum}-raw.log`, JSON.stringify(rawRes, undefined, '\t'));
@@ -623,13 +621,6 @@ function logException(rawRes, oldException, newException) {
         console.error('normalizr: oops', e, rawRes, oldException, newException);
     }
 }
-setTimeout(() => {
-    logMismatch(["just checking (raw)"], ["just checking (old)"], ["just checking (new)"]);
-    const a = [];
-    a.push(a);
-    logMismatch(a, ["just checking (old)"], ["just checking (new)"]);
-    logException(["just checking (exceptions raw input)"], new Error('error 1'), new Error('error 2'));
-}, 10000);
 let calls_norm = 0;
 export const normalize = (input, schema, circularDependencies = false) => {
     fs.writeFileSync(`./normalizr-cnt-norm.log`, String(++calls_norm));
