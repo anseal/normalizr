@@ -48,15 +48,22 @@ const filterPlainObject = (obj, fn) => {
     return newObj;
 };
 const compilePlainObjectMapping = (definition) => {
-    const compiledDefinition = mapPlainObject(definition, compileSchema);
+    // /*
+    // TODO: !!! that was a good hunt. but don't know wat to do with a catch
+    // there is some code in a wild that depends on the sequence of props in schemas (which is obviously wrong, but I need to support it for now)
+    // and filtering out undefined schemas (the existance of which is also wrong) here can change the sequence
+    return mapPlainObject(definition, compileSchema);
+    /*/
+    const compiledDefinition = mapPlainObject(definition, compileSchema)
     // TODO: I consider this to be a client error, but for backward compatibility let it be for now. remove!
     return filterPlainObject(compiledDefinition, schema => {
-        if (!schema) {
-            console.warn("Nil schemas are depricated.");
-            return false;
+        if( !schema ) {
+            console.warn("Nil schemas are depricated.")
+            return false
         }
-        return true;
-    });
+        return true
+    })
+    //*/
 };
 let maxId = 0;
 const originalIdAttribute = 'id';
