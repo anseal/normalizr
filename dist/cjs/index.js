@@ -1,18 +1,13 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.denormalize = exports.normalize = exports.schema = exports.overrideDefaultsDuringMigration = void 0;
+exports.denormalize = exports.normalize = exports.schema = exports.overrideDefaultsDuringMigration = exports.strategy = void 0;
 const compileSchema = (schema) => {
     if (schema === undefined || schema === null) {
         console.warn("Nil schemas are depricated.");
         // @ts-ignore // TODO: remove? some TS versions (4.2.4?) do not understand that `schema` is actually `never` in here
         return schema;
     }
-    // TODO: looks like monkey-patching
-    if (schema instanceof EntitySchema ||
-        schema instanceof ValuesSchema ||
-        schema instanceof ArraySchema ||
-        schema instanceof ObjectSchema ||
-        schema instanceof UnionSchema) {
+    if (schema instanceof CompiledSchema) {
         return schema;
     }
     if (Array.isArray(schema)) {
@@ -80,16 +75,33 @@ const defaultProcessStrategy = originalProcessStrategy;
 // const defaultProcessStrategy = inplaceProcessStrategy
 const originalFallbackStrategy = (_key, _schema) => undefined;
 const defaultFallbackStrategy = originalFallbackStrategy;
-const overrideDefaultsDuringMigration = (schema, defaults = {}) => {
+exports.strategy = {
+    noMerge: noMergeStrategy,
+    inplaceMerge: simpleMergeStrategy,
+    fullMerge: originalMergeStrategy,
+    inplaceProcess: inplaceProcessStrategy,
+    aggregateProcess: (input, _parent, _keyInParent, existingEntity) => {
+        return Object.assign(existingEntity || {}, input);
+    },
+    aggregateInplaceProcess: (input, _parent, _keyInParent, existingEntity) => {
+        if (existingEntity) {
+            return Object.assign(existingEntity, input);
+        }
+        return input;
+    },
+    copyAndProcess: originalProcessStrategy,
+    noFallback: originalFallbackStrategy,
+};
+const overrideDefaultsDuringMigration = (schema, defaults = {}, replacements = new Map()) => {
     defaults = Object.assign({ idAttribute: defaultIdAttribute, mergeStrategy: noMergeStrategy, processStrategy: inplaceProcessStrategy, fallbackStrategy: originalFallbackStrategy }, defaults);
     // TODO: I consider this to be a client error, but for backward compatibility let it be for now. remove!
     if (!schema) {
         throw new Error("Nil schemas are depricated.");
     }
-    return _overrideDefaultsDuringMigration(compileSchema(schema), defaults, new Map());
+    return _overrideDefaultsDuringMigration(compileSchema(schema), defaults, replacements, new Map());
 };
 exports.overrideDefaultsDuringMigration = overrideDefaultsDuringMigration;
-const _overrideDefaultsDuringMigration = (schema, defaults, visitedSchemaElements) => {
+const _overrideDefaultsDuringMigration = (schema, defaults, replacements, visitedSchemaElements) => {
     if (!schema) {
         console.warn("Nil schemas are depricated.");
         return schema;
@@ -98,62 +110,52 @@ const _overrideDefaultsDuringMigration = (schema, defaults, visitedSchemaElement
     if (cachedSchema !== undefined) {
         return cachedSchema;
     }
-    const newSchema = Object.create(Object.getPrototypeOf(schema));
+    const replacement = replacements.get(schema);
+    const newSchema = Object.create(Object.getPrototypeOf(replacement || schema));
     Object.assign(newSchema, schema);
     visitedSchemaElements.set(schema, newSchema);
-    if (schema instanceof ArraySchema ||
-        schema instanceof UnionSchema ||
-        schema instanceof ValuesSchema) {
-        const newSubSchema = _overrideDefaultsDuringMigration(schema.schema, defaults, visitedSchemaElements);
+    if (schema.schema instanceof CompiledSchema) {
+        const newSubSchema = _overrideDefaultsDuringMigration(schema.schema, defaults, replacements, visitedSchemaElements);
         // TODO: I consider this to be a client error, but for backward compatibility let it be for now. remove!
         if (!newSubSchema) {
             throw new Error("Nil schemas are depricated.");
         }
         newSchema.schema = newSubSchema;
     }
-    else if (schema instanceof ObjectSchema) {
-        for (const key in schema.schema) {
-            const newSubSchema = _overrideDefaultsDuringMigration(schema.schema[key], defaults, visitedSchemaElements);
-            // TODO: I consider this to be a client error, but for backward compatibility let it be for now. remove!
-            if (!newSubSchema) {
-                console.warn("Nil schemas are depricated.");
-                continue;
-            }
-            newSchema.schema[key] = newSubSchema;
-        }
-    }
-    else if (schema instanceof EntitySchema) {
-        const _newSchema = newSchema;
-        _newSchema.__id = _newSchema.__id + "*"; // TODO: for debugging purposes. remove?
-        const override = (prop, defaultValue) => {
-            if (schema[`_${prop}`] === defaultValue) {
-                newSchema[`_${prop}`] = defaults[prop];
-            }
-            else {
-                newSchema[`_${prop}`] = schema[`_${prop}`];
-            }
-        };
-        override('idAttribute', defaultIdAttribute);
-        override('mergeStrategy', defaultMergeStrategy);
-        override('processStrategy', defaultProcessStrategy);
-        override('fallbackStrategy', defaultFallbackStrategy);
-        for (const key in schema.schema) {
-            const newSubSchema = _overrideDefaultsDuringMigration(schema.schema[key], defaults, visitedSchemaElements);
-            // TODO: I consider this to be a client error, but for backward compatibility let it be for now. remove!
-            if (!newSubSchema) {
-                console.warn("Nil schemas are depricated.");
-                continue;
-            }
-            newSchema.schema[key] = newSubSchema;
-        }
-    }
     else {
-        throw new Error('Uexpected schema element');
+        for (const key in schema.schema) {
+            const newSubSchema = _overrideDefaultsDuringMigration(schema.schema[key], defaults, replacements, visitedSchemaElements);
+            // TODO: I consider this to be a client error, but for backward compatibility let it be for now. remove!
+            if (!newSubSchema) {
+                console.warn("Nil schemas are depricated.");
+                continue;
+            }
+            newSchema.schema[key] = newSubSchema;
+        }
+        if (schema instanceof EntitySchema) {
+            const _newSchema = newSchema;
+            _newSchema.__id = _newSchema.__id + "*"; // TODO: for debugging purposes. remove?
+            const override = (prop, defaultValue) => {
+                if (schema[`_${prop}`] === defaultValue) {
+                    newSchema[`_${prop}`] = defaults[prop];
+                }
+                else {
+                    newSchema[`_${prop}`] = schema[`_${prop}`];
+                }
+            };
+            override('idAttribute', defaultIdAttribute);
+            override('mergeStrategy', defaultMergeStrategy);
+            override('processStrategy', defaultProcessStrategy);
+            override('fallbackStrategy', defaultFallbackStrategy);
+        }
     }
     return newSchema;
 };
-class EntitySchema {
+class CompiledSchema {
+}
+class EntitySchema extends CompiledSchema {
     constructor(key, definition = {}, options = {}) {
+        super();
         this.__id = maxId++; // TODO: for debugging purposes. remove?
         this.schema = {};
         if (!key || typeof key !== 'string') {
@@ -209,7 +211,7 @@ class EntitySchema {
             return id;
         }
         // TODO: default Strategy - copy over existingEntity ?
-        const processedEntity = this._processStrategy(input, parent, keyInParent);
+        const processedEntity = this._processStrategy(input, parent, keyInParent, existingEntity, id);
         for (const key in this.schema) {
             // TODO: do we need this? all tests are passing
             // it looks like optimizations... but in reality perf is dropping
@@ -263,7 +265,11 @@ class EntitySchema {
         }
         // TODO: remove after deprication process is complete
         if (id === undefined) {
-            id = this._getId(input, parent, keyInParent);
+            id = this._getId(input, parent, keyInParent); // if a user adds `id` while mutating the `input`
+            // TODO: probable not needed, because v3.3.0 (which is my target) takes id from the `input` and not the `processedEntity`
+            // if(id === undefined) {
+            // 	id = this._getId(processedEntity, parent, keyInParent) // if a user adds `id` to the `processedEntity` without mutating the `input`
+            // }
         }
         if (existingEntity) {
             entitiesOfKind[id] = this._mergeStrategy(existingEntity, processedEntity);
@@ -283,8 +289,9 @@ class EntitySchema {
         return entity;
     }
 }
-class ObjectSchema {
+class ObjectSchema extends CompiledSchema {
     constructor(definition) {
+        super();
         this.schema = {};
         this.define(definition);
     }
@@ -334,8 +341,9 @@ class ObjectSchema {
         return object;
     }
 }
-class PolymorphicSchema {
+class PolymorphicSchema extends CompiledSchema {
     constructor(definition, schemaAttribute) {
+        super();
         this.schema = {};
         this._schemaAttribute = undefined;
         if (schemaAttribute) {
@@ -349,11 +357,7 @@ class PolymorphicSchema {
     }
     define(definition) {
         if (this._schemaAttribute !== undefined) {
-            if (definition instanceof EntitySchema ||
-                definition instanceof ArraySchema ||
-                definition instanceof ObjectSchema ||
-                definition instanceof ValuesSchema ||
-                definition instanceof UnionSchema) {
+            if (definition instanceof CompiledSchema) {
                 this.schema = definition;
             }
             else {
