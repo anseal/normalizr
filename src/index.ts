@@ -357,14 +357,18 @@ class EntitySchema extends CompiledSchema {
 		return id
 	}
 
-	denormalize(entity: Input, unvisit: Unvisit) {
+	denormalize(input: Input, unvisit: Unvisit) {
+		if (input === undefined || input === null) {
+			return input
+		}
+
 		Object.keys(this.schema).forEach((key) => {
-			if (entity.hasOwnProperty(key)) {
+			if (input.hasOwnProperty(key)) {
 				const schema = this.schema[key]
-				entity[key] = unvisit(entity[key], schema)
+				input[key] = unvisit(input[key], schema)
 			}
 		})
-		return entity
+		return input
 	}
 }
 
@@ -414,6 +418,9 @@ class ObjectSchema extends CompiledSchema {
 	}
 
 	denormalize(input: Input, unvisit: Unvisit) {
+		if (input === undefined || input === null) {
+			return input
+		}
 		const object = { ...input }
 		Object.keys(this.schema).forEach((key) => {
 			if (object[key] != null) {
@@ -479,14 +486,17 @@ abstract class PolymorphicSchema extends CompiledSchema {
 			}
 	}
 
-	denormalizeValue(value: Input, unvisit: Unvisit): Output {
-		const schemaKey: Key = value.schema
-		if (this._schemaAttribute && !schemaKey) {
-			return value
+	denormalizeValue(input: Input, unvisit: Unvisit): Output {
+		if (input === undefined || input === null) {
+			return input
 		}
-		const id = !this._schemaAttribute ? undefined : value.id
+		const schemaKey: Key = input.schema
+		if (this._schemaAttribute && !schemaKey) {
+			return input
+		}
+		const id = !this._schemaAttribute ? undefined : input.id
 		const schema: CompiledSchema = !this._schemaAttribute ? (this.schema as CompiledSchema) : (this.schema as CompiledPlainObjectSchema)[schemaKey]
-		return unvisit(id || value, schema)
+		return unvisit(id || input, schema)
 	}
 }
 
@@ -511,6 +521,9 @@ class ValuesSchema extends PolymorphicSchema {
 	}
 
 	denormalize(input: Input, unvisit: Unvisit) {
+		if (input === undefined || input === null) {
+			return input
+		}
 		return Object.keys(input).reduce((output, key) => {
 			const entityOrId = input[key]
 			return {
@@ -635,7 +648,9 @@ export const denormalize = (input: Input, schema: Schema, entities: Entities) =>
 	if( schema === undefined || schema === null ) {
 		throw new Error("Nil schemas are depricated.")
 	}
-	if( input === undefined ) { return undefined }
+	if( input === undefined || input === null ) { // TODO: remove. there're checks deeper in the call stack
+		return input
+	}
 
 	const cache: Record<Key,Record<Key, Input>> = {}
 

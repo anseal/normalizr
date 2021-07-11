@@ -136,4 +136,9 @@ describe('denormalize', () => {
 
 		expect(denormalize(normalizedData.result, [patronsSchema], normalizedData.entities)).toMatchSnapshot()
 	})
+
+	// TODO: depricate and remove? is it in any way a correct use case?
+	test('denormalizes `[null]` (compatibility with the original)', () => {
+		expect(denormalize([ null ], [ new schema.Entity('picture') ], { picture: undefined })).toStrictEqual([ null ])
+	})
 })
