@@ -275,14 +275,17 @@ class EntitySchema extends CompiledSchema {
         }
         return id;
     }
-    denormalize(entity, unvisit) {
+    denormalize(input, unvisit) {
+        if (input === undefined || input === null) {
+            return input;
+        }
         Object.keys(this.schema).forEach((key) => {
-            if (entity.hasOwnProperty(key)) {
+            if (input.hasOwnProperty(key)) {
                 const schema = this.schema[key];
-                entity[key] = unvisit(entity[key], schema);
+                input[key] = unvisit(input[key], schema);
             }
         });
-        return entity;
+        return input;
     }
 }
 class ObjectSchema extends CompiledSchema {
@@ -328,6 +331,9 @@ class ObjectSchema extends CompiledSchema {
         return output;
     }
     denormalize(input, unvisit) {
+        if (input === undefined || input === null) {
+            return input;
+        }
         const object = Object.assign({}, input);
         Object.keys(this.schema).forEach((key) => {
             if (object[key] != null) {
@@ -388,14 +394,17 @@ class PolymorphicSchema extends CompiledSchema {
                 schema: attr
             };
     }
-    denormalizeValue(value, unvisit) {
-        const schemaKey = value.schema;
-        if (this._schemaAttribute && !schemaKey) {
-            return value;
+    denormalizeValue(input, unvisit) {
+        if (input === undefined || input === null) {
+            return input;
         }
-        const id = !this._schemaAttribute ? undefined : value.id;
+        const schemaKey = input.schema;
+        if (this._schemaAttribute && !schemaKey) {
+            return input;
+        }
+        const id = !this._schemaAttribute ? undefined : input.id;
         const schema = !this._schemaAttribute ? this.schema : this.schema[schemaKey];
-        return unvisit(id || value, schema);
+        return unvisit(id || input, schema);
     }
 }
 class ValuesSchema extends PolymorphicSchema {
@@ -418,6 +427,9 @@ class ValuesSchema extends PolymorphicSchema {
         return output;
     }
     denormalize(input, unvisit) {
+        if (input === undefined || input === null) {
+            return input;
+        }
         return Object.keys(input).reduce((output, key) => {
             const entityOrId = input[key];
             return Object.assign(Object.assign({}, output), { [key]: this.denormalizeValue(entityOrId, unvisit) });
@@ -520,8 +532,8 @@ export const denormalize = (input, schema, entities) => {
     if (schema === undefined || schema === null) {
         throw new Error("Nil schemas are depricated.");
     }
-    if (input === undefined) {
-        return undefined;
+    if (input === undefined || input === null) { // TODO: remove. there're checks deeper in the call stack
+        return input;
     }
     const cache = {};
     function unvisit(input, schema) {
