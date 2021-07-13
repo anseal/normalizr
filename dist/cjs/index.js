@@ -3,7 +3,8 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.denormalize = exports.normalize = exports.schema = exports.overrideDefaultsDuringMigration = exports.strategy = void 0;
 const compileSchema = (schema) => {
     if (schema === undefined || schema === null) {
-        console.warn("Nil schemas are depricated.");
+        // TODO: OK, `console` is not a great idea. it interferes with some tools (e.g jest). Can I think of something better?
+        // console.warn("Nil schemas are depricated.")
         // @ts-ignore // TODO: remove? some TS versions (4.2.4?) do not understand that `schema` is actually `never` in here
         return schema;
     }
@@ -53,7 +54,8 @@ const compilePlainObjectMapping = (definition) => {
     // TODO: I consider this to be a client error, but for backward compatibility let it be for now. remove!
     return filterPlainObject(compiledDefinition, schema => {
         if( !schema ) {
-            console.warn("Nil schemas are depricated.")
+            // TODO: OK. console is not a great idea. it interferes with some tools (e.g jest). Can I think of something better?
+            // console.warn("Nil schemas are depricated.")
             return false
         }
         return true
@@ -103,7 +105,8 @@ const overrideDefaultsDuringMigration = (schema, defaults = {}, replacements = n
 exports.overrideDefaultsDuringMigration = overrideDefaultsDuringMigration;
 const _overrideDefaultsDuringMigration = (schema, defaults, replacements, visitedSchemaElements) => {
     if (!schema) {
-        console.warn("Nil schemas are depricated.");
+        // TODO: OK, `console` is not a great idea. it interferes with some tools (e.g jest). Can I think of something better?
+        // console.warn("Nil schemas are depricated.")
         return schema;
     }
     const cachedSchema = visitedSchemaElements.get(schema);
@@ -127,7 +130,8 @@ const _overrideDefaultsDuringMigration = (schema, defaults, replacements, visite
             const newSubSchema = _overrideDefaultsDuringMigration(schema.schema[key], defaults, replacements, visitedSchemaElements);
             // TODO: I consider this to be a client error, but for backward compatibility let it be for now. remove!
             if (!newSubSchema) {
-                console.warn("Nil schemas are depricated.");
+                // TODO: OK, `console` is not a great idea. it interferes with some tools (e.g jest). Can I think of something better?
+                // console.warn("Nil schemas are depricated.")
                 continue;
             }
             newSchema.schema[key] = newSubSchema;
@@ -230,7 +234,7 @@ class EntitySchema extends CompiledSchema {
             const resolvedSchema = typeof schema === 'function' ? schema(input) : schema; // TODO: function instead of if?
             // TODO: I consider this to be a client error, but for backward compatibility let it be for now. remove!
             if (!resolvedSchema) {
-                // console output here is really bad, left it for debuging
+                // TODO: `console` output here is really bad, left it for debuging
                 // console.warn("Nil schemas are depricated.", this.schema, key)
                 continue;
             }

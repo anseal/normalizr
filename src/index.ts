@@ -39,7 +39,8 @@ export interface EntityOptions {
 
 const compileSchema = (schema: Schema): CompiledSchema => {
 	if( schema === undefined || schema === null ) {
-		console.warn("Nil schemas are depricated.")
+		// TODO: OK, `console` is not a great idea. it interferes with some tools (e.g jest). Can I think of something better?
+		// console.warn("Nil schemas are depricated.")
 		// @ts-ignore // TODO: remove? some TS versions (4.2.4?) do not understand that `schema` is actually `never` in here
 		return schema
 	}
@@ -90,7 +91,8 @@ const compilePlainObjectMapping = (definition: PlainObjectSchema): CompiledPlain
 	// TODO: I consider this to be a client error, but for backward compatibility let it be for now. remove!
 	return filterPlainObject(compiledDefinition, schema => {
 		if( !schema ) {
-			console.warn("Nil schemas are depricated.")
+			// TODO: OK. console is not a great idea. it interferes with some tools (e.g jest). Can I think of something better?
+			// console.warn("Nil schemas are depricated.")
 			return false
 		}
 		return true
@@ -153,7 +155,8 @@ export const overrideDefaultsDuringMigration = (schema: DepricatedSchema, defaul
 
 const _overrideDefaultsDuringMigration = (schema: CompiledSchema, defaults: EntityOptions, replacements: Map<CompiledSchema, CompiledSchema>, visitedSchemaElements: Map<CompiledSchema, CompiledSchema>): CompiledSchema => {
 	if( !schema ) {
-		console.warn("Nil schemas are depricated.")
+		// TODO: OK, `console` is not a great idea. it interferes with some tools (e.g jest). Can I think of something better?
+		// console.warn("Nil schemas are depricated.")
 		return schema
 	}
 	const cachedSchema = visitedSchemaElements.get(schema)
@@ -175,7 +178,8 @@ const _overrideDefaultsDuringMigration = (schema: CompiledSchema, defaults: Enti
 			const newSubSchema = _overrideDefaultsDuringMigration(schema.schema[key], defaults, replacements, visitedSchemaElements)
 			// TODO: I consider this to be a client error, but for backward compatibility let it be for now. remove!
 			if( !newSubSchema ) {
-				console.warn("Nil schemas are depricated.")
+				// TODO: OK, `console` is not a great idea. it interferes with some tools (e.g jest). Can I think of something better?
+				// console.warn("Nil schemas are depricated.")
 				continue
 			}
 			(newSchema.schema as CompiledPlainObjectSchema)[key] = newSubSchema
@@ -303,7 +307,7 @@ class EntitySchema extends CompiledSchema {
 				const resolvedSchema: CompiledSchema = typeof schema === 'function' ? schema(input) : schema // TODO: function instead of if?
 				// TODO: I consider this to be a client error, but for backward compatibility let it be for now. remove!
 				if( !resolvedSchema ) {
-					// console output here is really bad, left it for debuging
+					// TODO: `console` output here is really bad, left it for debuging
 					// console.warn("Nil schemas are depricated.", this.schema, key)
 					continue
 				}
