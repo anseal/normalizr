@@ -5,7 +5,7 @@ let i = 0
 const run = () => {
     setImmediate(() => {
         test(performance)
-        if( i++ < 20 ) run()
+        // if( i++ < 20 ) run()
     })
 }
 run()

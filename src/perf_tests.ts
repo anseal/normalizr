@@ -1,4 +1,4 @@
-import { normalize, overrideDefaultsDuringMigration, schema } from './index.js'
+import { normalize, overrideDefaultsDuringMigration, schema, Schema } from './index.js'
 import { cloneWithJSON, clonePojoTree, deepEqualWithJSON, deepEqualSameShape } from './utils.js'
 
 const randomInRange = (min: number, max: number) => Math.floor(Math.random() * (max - min + 1)) + min
@@ -57,7 +57,7 @@ const originalData = {
 
 // const article_ = article
 const article_ = overrideDefaultsDuringMigration(article)
-
+/*
 export const test = (performance: { now: () => number }) => {
 	const data = clonePojoTree(originalData)
 	const data2 = cloneWithJSON(originalData)
@@ -72,3 +72,323 @@ export const test = (performance: { now: () => number }) => {
 	console.log(duration)
 	console.log(Object.keys(normalizedData).length)
 }
+/*/
+export const test = (performance: { now: () => number } = { now: () => 0 }) => {
+/*	const addressSchema = new schema.Entity('address', {}, {
+		processStrategy: (entity) => {
+			console.log('address processed', entity)
+			return entity
+		}
+	})
+	const userSchema: [Schema] = [ new schema.Entity('user', { address: addressSchema }) ]
+
+	const john = () => ({ id: 1, name: 'John', address: { id: 1, street: "Elm" } });
+	const jane = () => ({ id: 2, name: 'Jane', address: { id: 2, town: "Silent hill" } });
+
+	{
+		const normalizedData = normalize([
+			john(),
+			john(),
+			{ ...john(), surname: 'Doe' },
+			jane(),
+		], userSchema)
+		console.log(JSON.stringify(normalizedData))
+	}
+
+	{
+		const userSchemaNewStrategies = overrideDefaultsDuringMigration(userSchema)
+		const normalizedData = normalize([
+			john(),
+			john(),
+			{ ...john(), surname: 'Doe' },
+			jane(),
+		], userSchemaNewStrategies)
+		console.log(JSON.stringify(normalizedData))
+	}
+
+	{
+		const userSchemaNewStrategies = overrideDefaultsDuringMigration(userSchema)
+		const normalizedData = normalize([
+			{ ...john(), surname: 'Doe' },
+			john(),
+			john(),
+			jane(),
+		], userSchemaNewStrategies)
+		console.log(JSON.stringify(normalizedData))
+	}
+
+	{
+		const userSchema: [Schema] = [
+			new schema.Entity('user', { address: addressSchema }, {
+				processStrategy: (entity, _parent, _keyInParent, existingEntity, id) => {
+					if( existingEntity && entity.surname !== undefined ) {
+						existingEntity.surname = entity.surname
+						return existingEntity
+					}
+					return entity
+				},
+				mergeStrategy: x => x,
+			})
+		]
+		const userSchemaNewStrategies = overrideDefaultsDuringMigration(userSchema)
+		const normalizedData = normalize([
+			john(),
+			john(),
+			{ ...john(), surname: 'Doe' },
+			jane(),
+		], userSchemaNewStrategies)
+		console.log(JSON.stringify(normalizedData))
+	}
+
+
+	//
+	//
+	//
+	console.log("!!!!!!!!")
+	{
+		const slowConvertion = (value: string) => {
+			console.log('slowConvertion')
+			return value?.toUpperCase()
+		}
+			
+		const addressProcessStrategy = (entity: any) => {
+			console.log('address processed', entity)
+			return {
+				county: slowConvertion(entity.county), 
+				town: slowConvertion(entity.town),
+				street: slowConvertion(entity.street),
+			}
+		}
+		const addressSchema = new schema.Entity('address', {}, {
+			processStrategy: addressProcessStrategy
+		})
+		const userSchema: [Schema] = [ new schema.Entity('user', { address: addressSchema }) ]
+
+		const addr_part_1 = () => ({ id: 1, county: 'usa', street: "Elm" })
+		const addr_part_2 = () => ({ id: 1, county: 'usa', town: "Silent hill" })
+
+		const john = () => ({ id: 1, name: 'John', address: addr_part_1() })
+		const jane = () => ({ id: 2, name: 'Jane', address: addr_part_2() })
+
+		{
+			const normalizedData = normalize([
+				john(),
+				john(),
+				{ ...john(), address: addr_part_2() },
+				jane(),
+			], userSchema)
+			console.log(JSON.stringify(normalizedData))
+		}
+
+		{
+			const userSchemaNewStrategies = overrideDefaultsDuringMigration(userSchema)
+			const normalizedData = normalize([
+				john(),
+				john(),
+				{ ...john(), address: addr_part_2() },
+				jane(),
+			], userSchemaNewStrategies)
+			console.log(JSON.stringify(normalizedData))
+		}
+		{
+			const addressSchema = new schema.Entity('address', {}, {
+				processStrategy: addressProcessStrategy,
+				mergeStrategy: (entityA, entityB) => Object.assign(entityA, entityB),
+			})
+			const userSchema: [Schema] = [ new schema.Entity('user', { address: addressSchema }) ]
+
+			const userSchemaNewStrategies = overrideDefaultsDuringMigration(userSchema)
+			const normalizedData = normalize([
+				john(),
+				john(),
+				{ ...john(), address: addr_part_2() },
+				{ ...jane(), address: addr_part_1() },
+			], userSchemaNewStrategies)
+			console.log(JSON.stringify(normalizedData))
+		}
+		{
+			const addressSchema = new schema.Entity('address', {}, {
+				processStrategy: addressProcessStrategy,
+				mergeStrategy: (entityA, entityB) => Object.assign(entityA, entityB),
+			})
+			const userSchema: [Schema] = [ new schema.Entity('user', { address: addressSchema }, {
+				mergeStrategy: x => x,
+			}) ]
+
+			const userSchemaNewStrategies = overrideDefaultsDuringMigration(userSchema)
+			const normalizedData = normalize([
+				john(),
+				john(),
+				{ ...john(), address: addr_part_2() },
+				{ ...jane(), address: addr_part_1() },
+			], userSchemaNewStrategies)
+			console.log(JSON.stringify(normalizedData))
+		}
+		{
+			const addressSchema = new schema.Entity('address', {}, {
+				processStrategy: (entity, _parent, _keyInParent, existingEntity, id) => {
+					console.log('lightweigth processing', entity)
+					const address = existingEntity || { ...entity }
+					if( entity.country !== undefined ) address.country = slowConvertion(entity.country)
+					if( entity.town !== undefined ) address.town = slowConvertion(entity.town)
+					if( entity.street !== undefined ) address.street = slowConvertion(entity.street)
+					return address
+				},
+				mergeStrategy: x => x,
+			})
+			const userSchema: [Schema] = [ new schema.Entity('user', { address: addressSchema }, {
+				mergeStrategy: x => x,
+			}) ]
+
+			const userSchemaNewStrategies = overrideDefaultsDuringMigration(userSchema)
+			const normalizedData = normalize([
+				john(),
+				john(),
+				{ ...john(), address: addr_part_2() },
+				{ ...jane(), address: addr_part_1() },
+			], userSchemaNewStrategies)
+			console.log(JSON.stringify(normalizedData))
+		}
+	}
+//*/
+	//
+	//
+	//
+	console.log("???")
+	{
+		const slowIdAttribute = (entity: any) => {
+			console.log('slowIdAttribute')
+			return String(Math.pow(entity.id, 3))
+		}
+		const slowConvertion = (value: string) => {
+			console.log('slowConvertion')
+			return value?.toUpperCase()
+		}
+		const slowAddressProcessStrategy = (entity: any) => {
+			console.log('address processed', entity)
+			return {
+				id: slowIdAttribute(entity),
+				county: slowConvertion(entity.county), 
+				town: slowConvertion(entity.town),
+				street: slowConvertion(entity.street),
+			}
+		}
+		const slowAddressMergeStrategy = (entityA: any, entityB: any) => {
+			console.log('address merged', entityA, entityB)
+			return { ...entityA, ...entityB }
+		}
+		const slowUserProcessStrategy = (entity: any) => {
+			console.log('address processed', entity)
+			return {
+				id: slowIdAttribute(entity),
+				name: slowConvertion(entity.name), 
+				surname: slowConvertion(entity.surname),
+			}
+		}
+		const slowUserMergeStrategy = (entityA: any, entityB: any) => {
+			console.log('user merged', entityA, entityB)
+			return { ...entityA, ...entityB }
+		}
+		const addressSchema = new schema.Entity('address', {}, {
+			idAttribute: slowIdAttribute,
+			processStrategy: slowAddressProcessStrategy,
+			mergeStrategy: slowAddressMergeStrategy,
+		})
+		const userSchema: [Schema] = [
+			new schema.Entity('user', { address: addressSchema }, {
+				idAttribute: slowIdAttribute,
+				processStrategy: slowUserProcessStrategy,
+				mergeStrategy: slowUserMergeStrategy,
+			})
+		]
+
+		const addr_part_1 = () => ({ id: 1, county: 'usa', street: "Elm" })
+		const addr_part_2 = () => ({ id: 1, county: 'usa', town: "Silent hill" })
+
+		const john = () => ({ id: 1, name: 'John', address: addr_part_1() })
+		const jane = () => ({ id: 2, name: 'Jane', address: addr_part_2() })
+
+		{
+			const normalizedData = normalize([
+				john(),
+				john(),
+				{ ...john(), address: addr_part_2() },
+				jane(),
+			], userSchema)
+			console.log(JSON.stringify(normalizedData))
+		}
+/*
+		{
+			const userSchemaNewStrategies = overrideDefaultsDuringMigration(userSchema)
+			const normalizedData = normalize([
+				john(),
+				john(),
+				{ ...john(), address: addr_part_2() },
+				jane(),
+			], userSchemaNewStrategies)
+			console.log(JSON.stringify(normalizedData))
+		}
+		{
+			const addressSchema = new schema.Entity('address', {}, {
+				processStrategy: slowAddressProcessStrategy,
+				mergeStrategy: (entityA, entityB) => Object.assign(entityA, entityB),
+			})
+			const userSchema: [Schema] = [ new schema.Entity('user', { address: addressSchema }) ]
+
+			const userSchemaNewStrategies = overrideDefaultsDuringMigration(userSchema)
+			const normalizedData = normalize([
+				john(),
+				john(),
+				{ ...john(), address: addr_part_2() },
+				{ ...jane(), address: addr_part_1() },
+			], userSchemaNewStrategies)
+			console.log(JSON.stringify(normalizedData))
+		}
+		{
+			const addressSchema = new schema.Entity('address', {}, {
+				processStrategy: slowAddressProcessStrategy,
+				mergeStrategy: (entityA, entityB) => Object.assign(entityA, entityB),
+			})
+			const userSchema: [Schema] = [ new schema.Entity('user', { address: addressSchema }, {
+				mergeStrategy: x => x,
+			}) ]
+
+			const userSchemaNewStrategies = overrideDefaultsDuringMigration(userSchema)
+			const normalizedData = normalize([
+				john(),
+				john(),
+				{ ...john(), address: addr_part_2() },
+				{ ...jane(), address: addr_part_1() },
+			], userSchemaNewStrategies)
+			console.log(JSON.stringify(normalizedData))
+		}
+		{
+			const addressSchema = new schema.Entity('address', {}, {
+				processStrategy: (entity, _parent, _keyInParent, existingEntity, id) => {
+					console.log('lightweigth processing', entity)
+					const address = existingEntity || { ...entity }
+					if( entity.country !== undefined ) address.country = slowConvertion(entity.country)
+					if( entity.town !== undefined ) address.town = slowConvertion(entity.town)
+					if( entity.street !== undefined ) address.street = slowConvertion(entity.street)
+					return address
+				},
+				mergeStrategy: x => x,
+			})
+			const userSchema: [Schema] = [ new schema.Entity('user', { address: addressSchema }, {
+				mergeStrategy: x => x,
+			}) ]
+
+			const userSchemaNewStrategies = overrideDefaultsDuringMigration(userSchema)
+			const normalizedData = normalize([
+				john(),
+				john(),
+				{ ...john(), address: addr_part_2() },
+				{ ...jane(), address: addr_part_1() },
+			], userSchemaNewStrategies)
+			console.log(JSON.stringify(normalizedData))
+		}
+		// */
+	}
+}
+test()
+//*/
